@@ -397,3 +397,17 @@ mod tests {
     fn test_chain_transaction_operations() {
         let mut chain = Chain::new();
         
+        let from = ObjectId::new(1, 2, 1).unwrap();
+        let to = ObjectId::new(1, 2, 2).unwrap();
+        let amount = AssetAmount {
+            amount: 10000,
+            asset_id: ObjectId::new(1, 3, 0).unwrap(),
+        };
+        
+        chain.create_transfer(from, to, amount, None).unwrap();
+        assert_eq!(chain.transaction_operations_count(), 1);
+        
+        chain.clear_transaction();
+        assert_eq!(chain.transaction_operations_count(), 0);
+    }
+}

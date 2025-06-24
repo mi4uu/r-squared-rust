@@ -90,7 +90,7 @@ impl BrainKey {
     /// Derive a public key from the brain key
     pub fn to_public_key(&self) -> EccResult<PublicKey> {
         let private_key = self.to_private_key()?;
-        Ok(private_key.public_key())
+        Ok(private_key.public_key()?)
     }
 
     /// Validate the brain key words against dictionary

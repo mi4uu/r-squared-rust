@@ -299,6 +299,9 @@ impl TransactionBuilder {
                 Operation::AccountCreate { fee, .. } => fee,
                 Operation::AccountUpdate { fee, .. } => fee,
                 Operation::AssetCreate { fee, .. } => fee,
+                Operation::AssetUpdate { fee, .. } => fee,
+                Operation::AssetIssue { fee, .. } => fee,
+                Operation::Custom { fee, .. } => fee,
             };
             
             if fee.asset_id != core_asset {
@@ -430,7 +433,10 @@ impl TransactionBuilder {
             signatures: vec![], // Empty signatures for signing
         };
         
-        let tx_bytes = bincode::serialize(&tx_without_sigs).map_err(|e| ChainError::ValidationError {
+        let config = bincode::config::standard()
+            .with_little_endian()
+            .with_fixed_int_encoding();
+        let tx_bytes = bincode::encode_to_vec(&tx_without_sigs, config).map_err(|e| ChainError::ValidationError {
             field: "serialization".to_string(),
             reason: format!("Failed to serialize transaction: {}", e),
         })?;
@@ -442,7 +448,7 @@ impl TransactionBuilder {
 
     /// Calculate transaction ID
     fn calculate_transaction_id(&self, transaction: &Transaction) -> ChainResult<String> {
-        use crate::ecc::hash::Hash;
+        use crate::ecc::hash;
         
         // Serialize transaction without signatures
         let tx_without_sigs = Transaction {
@@ -454,12 +460,15 @@ impl TransactionBuilder {
             signatures: vec![],
         };
         
-        let tx_bytes = bincode::serialize(&tx_without_sigs).map_err(|e| ChainError::ValidationError {
+        let config = bincode::config::standard()
+            .with_little_endian()
+            .with_fixed_int_encoding();
+        let tx_bytes = bincode::encode_to_vec(&tx_without_sigs, config).map_err(|e| ChainError::ValidationError {
             field: "serialization".to_string(),
             reason: format!("Failed to serialize transaction: {}", e),
         })?;
         
-        let hash = Hash::sha256(&tx_bytes);
+        let hash = hash::sha256(&tx_bytes);
         Ok(hex::encode(hash))
     }
 
@@ -499,7 +508,10 @@ impl TransactionBuilder {
     /// Estimate transaction size in bytes
     pub fn estimate_size(&self) -> ChainResult<usize> {
         let transaction = self.build()?;
-        let serialized = bincode::serialize(&transaction).map_err(|e| ChainError::ValidationError {
+        let config = bincode::config::standard()
+            .with_little_endian()
+            .with_fixed_int_encoding();
+        let serialized = bincode::encode_to_vec(&transaction, config).map_err(|e| ChainError::ValidationError {
             field: "serialization".to_string(),
             reason: format!("Failed to serialize transaction: {}", e),
         })?;

@@ -18,9 +18,8 @@ name = "r_squared_rust"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["std"]
+default = ["std", "serde_support", "async"]
 std = []
-wasm = ["wasm-bindgen", "js-sys", "web-sys", "getrandom/js"]
 async = ["tokio", "futures"]
 s3 = ["aws-sdk-s3", "aws-config", "async"]
 ipfs = ["ipfs-api-backend-hyper", "async"]
@@ -29,6 +28,7 @@ serde_support = ["serde", "serde_json"]
 [dependencies]
 # Core cryptographic dependencies
 secp256k1 = { version = "0.31", features = ["recovery", "global-context"] }
+sha1 = "0.10"
 sha2 = "0.10"
 sha3 = "0.10"
 ripemd = "0.1"
@@ -60,6 +60,7 @@ color-eyre = { version = "0.6", features = [
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
 log = { version = "0.4", features = ["serde"] }
+chrono = { version = "0.4", features = ["serde"] }
 
 # Async runtime (optional)
 tokio = { version = "1.0", features = ["full"], optional = true }
@@ -70,11 +71,8 @@ aws-sdk-s3 = { version = "1.0", optional = true }
 aws-config = { version = "1.0", optional = true }
 ipfs-api-backend-hyper = { version = "0.6", optional = true }
 
-# WASM support (optional)
-wasm-bindgen = { version = "0.2", optional = true }
-js-sys = { version = "0.3", optional = true }
-web-sys = { version = "0.3", optional = true }
-getrandom = { version = "0.3", features = ["js"], optional = true }
+# Random number generation
+getrandom = { version = "0.3" }
 
 # Utilities
 rand = "0.9"
@@ -90,11 +88,6 @@ proptest = "1.2"
 tokio-test = "0.4"
 tempfile = "3.6"
 
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen = "0.2"
-js-sys = "0.3"
-web-sys = "0.3"
-getrandom = { version = "0.3.3", features = ["js"] }
 
 [[bench]]
 name = "crypto_benchmarks"

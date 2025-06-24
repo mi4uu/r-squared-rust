@@ -129,6 +129,44 @@ impl Aes {
             })
     }
 
+    /// Encrypt data with checksum validation
+    pub fn encrypt_with_checksum(key: &[u8], data: &[u8]) -> EccResult<Vec<u8>> {
+        // Add checksum to data
+        let checksum = hash::sha256(data);
+        let mut data_with_checksum = data.to_vec();
+        data_with_checksum.extend_from_slice(&checksum[..4]); // 4-byte checksum
+        
+        // Encrypt with key
+        Self::encrypt(&data_with_checksum, key)
+    }
+
+    /// Decrypt data with checksum validation
+    pub fn decrypt_with_checksum(key: &[u8], encrypted_data: &[u8]) -> EccResult<Vec<u8>> {
+        // Decrypt
+        let decrypted = Self::decrypt(encrypted_data, key)?;
+        
+        if decrypted.len() < 4 {
+            return Err(EccError::EncryptionError {
+                reason: "Decrypted data too short for checksum".to_string(),
+            });
+        }
+        
+        // Extract data and checksum
+        let data_len = decrypted.len() - 4;
+        let data_bytes = &decrypted[..data_len];
+        let stored_checksum = &decrypted[data_len..];
+        
+        // Verify checksum
+        let computed_checksum = &hash::sha256(data_bytes)[..4];
+        if stored_checksum != computed_checksum {
+            return Err(EccError::EncryptionError {
+                reason: "Data checksum verification failed".to_string(),
+            });
+        }
+        
+        Ok(data_bytes.to_vec())
+    }
+
     /// Encrypt with password-based key derivation
     pub fn encrypt_with_password(data: &[u8], password: &str, salt: Option<&[u8]>) -> EccResult<Vec<u8>> {
         let salt_bytes = match salt {

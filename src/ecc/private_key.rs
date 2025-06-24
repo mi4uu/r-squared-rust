@@ -6,10 +6,10 @@ use secp256k1::{SecretKey, Message};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 use sha2::{Sha256, Digest};
 use base58::{ToBase58, FromBase58};
-use rand::Rng;
+use rand::{Rng, RngCore};
 
 /// A private key for elliptic curve cryptography
-#[derive(Clone, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct PrivateKey {
     key: SecretKey,
 }
@@ -18,7 +18,12 @@ impl PrivateKey {
     /// Generate a new random private key
     pub fn generate() -> EccResult<Self> {
         let mut rng = rand::thread_rng();
-        let key = SecretKey::new(&mut rng);
+        let mut key_bytes = [0u8; 32];
+        rng.fill_bytes(&mut key_bytes);
+        let key = SecretKey::from_byte_array(key_bytes)
+            .map_err(|e| EccError::InvalidPrivateKey {
+                reason: format!("Failed to generate private key: {}", e),
+            })?;
         Ok(Self { key })
     }
 
@@ -42,7 +47,7 @@ impl PrivateKey {
     pub fn from_wif(wif: &str) -> EccResult<Self> {
         let decoded = wif.from_base58()
             .map_err(|e| EccError::InvalidPrivateKey {
-                reason: format!("Invalid WIF format: {}", e),
+                reason: format!("Invalid WIF format: {:?}", e),
             })?;
 
         if decoded.len() < 37 {
@@ -102,9 +107,9 @@ impl PrivateKey {
     }
 
     /// Get the corresponding public key
-    pub fn public_key(&self) -> PublicKey {
+    pub fn public_key(&self) -> EccResult<PublicKey> {
         let public_key = secp256k1::PublicKey::from_secret_key(&SECP256K1, &self.key);
-        PublicKey::from_secp256k1(public_key)
+        Ok(PublicKey::from_secp256k1(public_key))
     }
 
     /// Convert to bytes
@@ -119,8 +124,23 @@ impl PrivateKey {
                 operation: format!("Message creation failed: {}", e),
             })?;
 
-        let signature = SECP256K1.sign_ecdsa_recoverable(&message, &self.key);
+        let signature = crate::ecc::secp256k1::SECP256K1.sign_ecdsa_recoverable(message, &self.key);
         Signature::from_recoverable_signature(signature, message_hash)
+    }
+
+    /// Sign a message (convenience method that hashes the message first)
+    pub fn sign_message(&self, message: &[u8]) -> EccResult<Signature> {
+        let hash = crate::ecc::hash::sha256(message);
+        self.sign(&hash)
+    }
+
+    /// Create a shared secret using ECDH
+    pub fn create_shared_secret(&self, other_public_key: &PublicKey) -> EccResult<[u8; 32]> {
+        use secp256k1::ecdh::SharedSecret;
+        
+        let other_secp_key = other_public_key.to_secp256k1();
+        let shared_secret = SharedSecret::new(&other_secp_key, &self.key);
+        Ok(shared_secret.secret_bytes())
     }
 
     /// Derive a child private key using a simple derivation scheme

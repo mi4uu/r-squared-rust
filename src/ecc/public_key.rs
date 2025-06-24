@@ -76,6 +76,12 @@ impl PublicKey {
         signature.verify(&message, self)
     }
 
+    /// Verify a signature against a message and signature (alternative interface)
+    pub fn verify_signature(&self, message: &[u8], signature: &Signature) -> EccResult<bool> {
+        let message_hash = crate::ecc::hash::sha256(message);
+        self.verify(&message_hash, signature)
+    }
+
     /// Get the public key hash (RIPEMD160 of SHA256)
     pub fn hash160(&self) -> [u8; 20] {
         let sha256_hash = Sha256::digest(&self.to_bytes());
@@ -106,7 +112,12 @@ impl PublicKey {
 
     /// Tweak this public key by adding a scalar
     pub fn tweak_add(&self, tweak: &[u8; 32]) -> EccResult<PublicKey> {
-        let tweaked = self.key.add_exp_tweak(&SECP256K1, tweak)
+        use secp256k1::Scalar;
+        let scalar = Scalar::from_be_bytes(*tweak)
+            .map_err(|e| EccError::CryptoOperationFailed {
+                operation: format!("Invalid scalar: {}", e),
+            })?;
+        let tweaked = self.key.add_exp_tweak(&SECP256K1, &scalar)
             .map_err(|e| EccError::CryptoOperationFailed {
                 operation: format!("Public key tweak failed: {}", e),
             })?;
@@ -116,6 +127,11 @@ impl PublicKey {
     /// Get the inner secp256k1 public key
     pub(crate) fn inner(&self) -> &Secp256k1PublicKey {
         &self.key
+    }
+
+    /// Convert to secp256k1 public key
+    pub fn to_secp256k1(&self) -> Secp256k1PublicKey {
+        self.key
     }
 }
 
@@ -141,7 +157,7 @@ mod tests {
     #[test]
     fn test_public_key_from_private() {
         let private_key = PrivateKey::generate().unwrap();
-        let public_key = private_key.public_key();
+        let public_key = private_key.public_key().unwrap();
         let bytes = public_key.to_bytes();
         let recovered = PublicKey::from_bytes(&bytes).unwrap();
         assert_eq!(public_key, recovered);
@@ -150,7 +166,7 @@ mod tests {
     #[test]
     fn test_public_key_hex_roundtrip() {
         let private_key = PrivateKey::generate().unwrap();
-        let public_key = private_key.public_key();
+        let public_key = private_key.public_key().unwrap();
         
         let hex = public_key.to_hex();
         let recovered = PublicKey::from_hex(&hex).unwrap();
@@ -160,7 +176,7 @@ mod tests {
     #[test]
     fn test_public_key_hash160() {
         let private_key = PrivateKey::generate().unwrap();
-        let public_key = private_key.public_key();
+        let public_key = private_key.public_key().unwrap();
         
         let hash160 = public_key.hash160();
         assert_eq!(hash160.len(), 20);
@@ -170,8 +186,8 @@ mod tests {
     fn test_public_key_combine() {
         let private_key1 = PrivateKey::generate().unwrap();
         let private_key2 = PrivateKey::generate().unwrap();
-        let public_key1 = private_key1.public_key();
-        let public_key2 = private_key2.public_key();
+        let public_key1 = private_key1.public_key().unwrap();
+        let public_key2 = private_key2.public_key().unwrap();
         
         let combined = public_key1.combine(&public_key2).unwrap();
         assert_ne!(combined, public_key1);
@@ -181,7 +197,7 @@ mod tests {
     #[test]
     fn test_public_key_tweak() {
         let private_key = PrivateKey::generate().unwrap();
-        let public_key = private_key.public_key();
+        let public_key = private_key.public_key().unwrap();
         
         let tweak = [1u8; 32];
         let tweaked = public_key.tweak_add(&tweak).unwrap();
@@ -191,7 +207,7 @@ mod tests {
     #[test]
     fn test_signature_verification() {
         let private_key = PrivateKey::generate().unwrap();
-        let public_key = private_key.public_key();
+        let public_key = private_key.public_key().unwrap();
         
         let message = b"Hello, R-Squared!";
         let hash = crate::ecc::hash::sha256(message);
@@ -204,7 +220,7 @@ mod tests {
     #[test]
     fn test_address_generation() {
         let private_key = PrivateKey::generate().unwrap();
-        let public_key = private_key.public_key();
+        let public_key = private_key.public_key().unwrap();
         
         let address = public_key.to_address("RSQ").unwrap();
         assert!(!address.to_string().is_empty());

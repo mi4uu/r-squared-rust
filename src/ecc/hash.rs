@@ -1,6 +1,7 @@
 //! Hash functions for cryptographic operations
 
-use sha2::{Sha256, Sha512, Sha1, Digest};
+use sha2::{Sha256, Sha512, Digest};
+use sha1::Sha1;
 use sha3::{Sha3_256, Sha3_512};
 use ripemd::{Ripemd160, Digest as RipemdDigest};
 use hmac::{Hmac, Mac};
@@ -147,9 +148,9 @@ pub fn checksum(data: &[u8], length: usize) -> Vec<u8> {
 }
 
 /// Verify checksum
-pub fn verify_checksum(data: &[u8], checksum: &[u8]) -> bool {
-    let computed = checksum(data, checksum.len());
-    computed == checksum
+pub fn verify_checksum(data: &[u8], expected_checksum: &[u8]) -> bool {
+    let computed = checksum(data, expected_checksum.len());
+    computed == expected_checksum
 }
 
 /// Password-based key derivation using PBKDF2 with SHA-256
@@ -172,7 +173,8 @@ pub fn scrypt_hash(password: &[u8], salt: &[u8], n: u32, r: u32, p: u32, length:
     )?;
     
     let mut output = vec![0u8; length];
-    scrypt(password, salt, &params, &mut output)?;
+    scrypt(password, salt, &params, &mut output)
+        .map_err(|_| scrypt::errors::InvalidParams)?;
     Ok(output)
 }
 

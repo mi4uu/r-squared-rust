@@ -107,6 +107,19 @@ pub enum ChainError {
     /// Validation error
     #[error("Validation error: {field}: {reason}")]
     ValidationError { field: String, reason: String },
+    
+    /// Cryptographic operation failed
+    #[error("Cryptographic operation failed: {operation}")]
+    CryptoOperationFailed { operation: String },
+}
+
+// Add conversion from EccError to ChainError
+impl From<EccError> for ChainError {
+    fn from(err: EccError) -> Self {
+        ChainError::CryptoOperationFailed {
+            operation: format!("ECC operation failed: {}", err),
+        }
+    }
 }
 
 /// Serializer-specific error types
@@ -134,7 +147,7 @@ pub enum SerializerError {
 }
 
 /// Storage-specific error types
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum StorageError {
     /// Storage backend not available
     #[error("Storage backend not available: {backend}")]

@@ -79,7 +79,7 @@ impl Address {
     fn from_rsquared_string(encoded: &str, prefix: &str) -> EccResult<Self> {
         let decoded = encoded.from_base58()
             .map_err(|e| EccError::InvalidAddress {
-                reason: format!("Invalid base58 encoding: {}", e),
+                reason: format!("Invalid base58 encoding: {:?}", e),
             })?;
 
         if decoded.len() != 24 {
@@ -113,7 +113,7 @@ impl Address {
     fn from_legacy_string(encoded: &str) -> EccResult<Self> {
         let decoded = encoded.from_base58()
             .map_err(|e| EccError::InvalidAddress {
-                reason: format!("Invalid base58 encoding: {}", e),
+                reason: format!("Invalid base58 encoding: {:?}", e),
             })?;
 
         if decoded.len() != 25 {
@@ -299,7 +299,7 @@ mod tests {
         let private_key = PrivateKey::generate().unwrap();
         let public_key = private_key.public_key();
         
-        let address = Address::from_public_key(&public_key, "RSQ").unwrap();
+        let address = Address::from_public_key(&public_key.unwrap(), "RSQ").unwrap();
         assert_eq!(address.prefix(), "RSQ");
         assert!(address.is_rsquared_format());
     }
@@ -308,7 +308,7 @@ mod tests {
     fn test_address_string_roundtrip() {
         let private_key = PrivateKey::generate().unwrap();
         let public_key = private_key.public_key();
-        let address = Address::from_public_key(&public_key, "RSQ").unwrap();
+        let address = Address::from_public_key(&public_key.unwrap(), "RSQ").unwrap();
         
         let address_str = address.to_string();
         let recovered = Address::from_string(&address_str).unwrap();
@@ -321,7 +321,7 @@ mod tests {
         let private_key = PrivateKey::generate().unwrap();
         let public_key = private_key.public_key();
         
-        let address = Address::from_public_key_legacy(&public_key, 0x00).unwrap();
+        let address = Address::from_public_key_legacy(&public_key.unwrap(), 0x00).unwrap();
         assert!(address.is_legacy_format());
         
         let address_str = address.to_string();
@@ -344,7 +344,7 @@ mod tests {
         let private_key = PrivateKey::generate().unwrap();
         let public_key = private_key.public_key();
         
-        let rsquared_addr = Address::from_public_key(&public_key, "RSQ").unwrap();
+        let rsquared_addr = Address::from_public_key(&public_key.unwrap(), "RSQ").unwrap();
         let legacy_addr = rsquared_addr.to_legacy(0x00);
         let back_to_rsquared = legacy_addr.to_rsquared("RSQ");
         

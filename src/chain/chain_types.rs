@@ -59,7 +59,7 @@ pub struct Asset {
 }
 
 /// Authority structure for account permissions
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, bincode::Encode, bincode::Decode)]
 pub struct Authority {
     /// Weight threshold required
     pub weight_threshold: u32,
@@ -72,7 +72,7 @@ pub struct Authority {
 }
 
 /// Account options
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, bincode::Encode, bincode::Decode)]
 pub struct AccountOptions {
     /// Memo key
     pub memo_key: String,
@@ -88,8 +88,21 @@ pub struct AccountOptions {
     pub extensions: Vec<Extension>,
 }
 
+impl Default for AccountOptions {
+    fn default() -> Self {
+        Self {
+            memo_key: String::new(),
+            voting_account: ObjectId::new(1, 2, 0).unwrap_or_default(),
+            num_witness: 0,
+            num_committee: 0,
+            votes: Vec::new(),
+            extensions: Vec::new(),
+        }
+    }
+}
+
 /// Asset options
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, bincode::Encode, bincode::Decode)]
 pub struct AssetOptions {
     /// Maximum supply
     pub max_supply: i64,
@@ -117,8 +130,36 @@ pub struct AssetOptions {
     pub extensions: Vec<Extension>,
 }
 
+impl Default for AssetOptions {
+    fn default() -> Self {
+        Self {
+            max_supply: 1000000000000000i64, // 1 quadrillion
+            market_fee_percent: 0,
+            max_market_fee: 1000000000000000i64,
+            issuer_permissions: 0,
+            flags: 0,
+            core_exchange_rate: Price {
+                base: AssetAmount {
+                    amount: 1,
+                    asset_id: ObjectId::new(1, 3, 0).unwrap_or_default(),
+                },
+                quote: AssetAmount {
+                    amount: 1,
+                    asset_id: ObjectId::new(1, 3, 0).unwrap_or_default(),
+                },
+            },
+            whitelist_authorities: Vec::new(),
+            blacklist_authorities: Vec::new(),
+            whitelist_markets: Vec::new(),
+            blacklist_markets: Vec::new(),
+            description: String::new(),
+            extensions: Vec::new(),
+        }
+    }
+}
+
 /// Price structure for asset exchange rates
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, bincode::Encode, bincode::Decode)]
 pub struct Price {
     /// Base asset amount
     pub base: AssetAmount,
@@ -127,7 +168,7 @@ pub struct Price {
 }
 
 /// Asset amount structure
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, bincode::Encode, bincode::Decode)]
 pub struct AssetAmount {
     /// Amount value
     pub amount: i64,
@@ -150,7 +191,7 @@ pub enum SpecialAuthority {
 }
 
 /// Extension type for future compatibility
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, bincode::Encode, bincode::Decode)]
 pub struct Extension {
     /// Extension type ID
     pub type_id: u8,
@@ -159,7 +200,7 @@ pub struct Extension {
 }
 
 /// Transaction structure
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, bincode::Encode, bincode::Decode)]
 pub struct Transaction {
     /// Reference block number
     pub ref_block_num: u16,
@@ -176,7 +217,7 @@ pub struct Transaction {
 }
 
 /// Signed transaction
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, bincode::Encode, bincode::Decode)]
 pub struct SignedTransaction {
     /// Base transaction
     pub transaction: Transaction,
@@ -185,7 +226,7 @@ pub struct SignedTransaction {
 }
 
 /// Operation types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, bincode::Encode, bincode::Decode)]
 pub enum Operation {
     /// Transfer operation
     Transfer {
@@ -285,10 +326,51 @@ pub enum Operation {
         /// Extensions
         extensions: Vec<Extension>,
     },
+    /// Asset update operation
+    AssetUpdate {
+        /// Fee
+        fee: AssetAmount,
+        /// Issuer account
+        issuer: ObjectId,
+        /// Asset to update
+        asset_to_update: ObjectId,
+        /// New options
+        new_options: Option<AssetOptions>,
+        /// Extensions
+        extensions: Vec<Extension>,
+    },
+    /// Asset issue operation
+    AssetIssue {
+        /// Fee
+        fee: AssetAmount,
+        /// Issuer account
+        issuer: ObjectId,
+        /// Asset to issue
+        asset_to_issue: AssetAmount,
+        /// Issue to account
+        issue_to_account: ObjectId,
+        /// Extensions
+        extensions: Vec<Extension>,
+    },
+    /// Custom operation
+    Custom {
+        /// Operation ID
+        id: u16,
+        /// Payer account
+        payer: ObjectId,
+        /// Required authorities
+        required_auths: Vec<ObjectId>,
+        /// Custom data
+        data: Vec<u8>,
+        /// Fee
+        fee: AssetAmount,
+        /// Extensions
+        extensions: Vec<Extension>,
+    },
 }
 
 /// Memo structure for encrypted messages
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, bincode::Encode, bincode::Decode)]
 pub struct Memo {
     /// From public key
     pub from: String,
@@ -301,7 +383,7 @@ pub struct Memo {
 }
 
 /// Bitasset options for market-pegged assets
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, bincode::Encode, bincode::Decode)]
 pub struct BitassetOptions {
     /// Feed lifetime in seconds
     pub feed_lifetime_sec: u32,
@@ -319,8 +401,22 @@ pub struct BitassetOptions {
     pub extensions: Vec<Extension>,
 }
 
+impl Default for BitassetOptions {
+    fn default() -> Self {
+        Self {
+            feed_lifetime_sec: 86400, // 24 hours
+            minimum_feeds: 1,
+            force_settlement_delay_sec: 86400, // 24 hours
+            force_settlement_offset_percent: 0,
+            maximum_force_settlement_volume: 2000, // 20%
+            short_backing_asset: ObjectId::new(1, 3, 0).unwrap_or_default(),
+            extensions: Vec::new(),
+        }
+    }
+}
+
 /// Block header structure
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, bincode::Encode, bincode::Decode)]
 pub struct BlockHeader {
     /// Previous block ID
     pub previous: String,
@@ -494,6 +590,9 @@ impl ChainTypes {
             Operation::AccountCreate { .. } => 5,
             Operation::AccountUpdate { .. } => 6,
             Operation::AssetCreate { .. } => 10,
+            Operation::AssetUpdate { .. } => 11,
+            Operation::AssetIssue { .. } => 12,
+            Operation::Custom { .. } => 35,
         }
     }
 

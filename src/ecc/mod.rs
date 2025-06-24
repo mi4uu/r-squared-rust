@@ -32,9 +32,10 @@ pub mod secp256k1 {
     //! Secp256k1 elliptic curve operations
     
     pub use secp256k1::{Secp256k1, All, SecretKey, PublicKey as Secp256k1PublicKey};
+    use std::sync::LazyLock;
     
     /// Global secp256k1 context for performance
-    pub static SECP256K1: Secp256k1<All> = Secp256k1::new();
+    pub static SECP256K1: LazyLock<Secp256k1<All>> = LazyLock::new(|| Secp256k1::new());
 }
 
 /// Common cryptographic constants
@@ -76,7 +77,7 @@ impl Ecc {
     /// Generate a new key pair
     pub fn generate_key_pair() -> EccResult<(PrivateKey, PublicKey)> {
         let private_key = PrivateKey::generate()?;
-        let public_key = private_key.public_key();
+        let public_key = private_key.public_key()?;
         Ok((private_key, public_key))
     }
 
@@ -84,14 +85,14 @@ impl Ecc {
     pub fn key_pair_from_brain_key(brain_key: &str) -> EccResult<(PrivateKey, PublicKey)> {
         let brain_key = BrainKey::from_words(brain_key)?;
         let private_key = brain_key.to_private_key()?;
-        let public_key = private_key.public_key();
+        let public_key = private_key.public_key()?;
         Ok((private_key, public_key))
     }
 
     /// Generate a key pair from entropy
     pub fn key_pair_from_entropy(entropy: &[u8]) -> EccResult<(PrivateKey, PublicKey)> {
         let private_key = KeyUtils::master_key_from_entropy(entropy)?;
-        let public_key = private_key.public_key();
+        let public_key = private_key.public_key()?;
         Ok((private_key, public_key))
     }
 
@@ -132,7 +133,7 @@ impl Ecc {
         let mut addresses = Vec::new();
         
         for key in derived_keys {
-            let public_key = key.public_key();
+            let public_key = key.public_key()?;
             let address = Address::from_public_key(&public_key, prefix)?;
             addresses.push(address);
         }

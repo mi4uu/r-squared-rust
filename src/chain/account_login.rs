@@ -7,7 +7,7 @@ use crate::chain::{
     chain_types::*,
     ObjectId,
 };
-use crate::ecc::{PrivateKey, PublicKey, Signature, Hash, BrainKey};
+use crate::ecc::{PrivateKey, PublicKey, Signature, BrainKey};
 use crate::error::{ChainError, ChainResult};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -111,8 +111,8 @@ impl AccountLogin {
         account: &str,
         sequence: u32,
     ) -> ChainResult<LoginCredentials> {
-        let brain_key_obj = BrainKey::from_string(brain_key)?;
-        let private_key = brain_key_obj.get_private_key(sequence)?;
+        let brain_key_obj = BrainKey::from_words(brain_key)?;
+        let private_key = brain_key_obj.to_private_key()?;
         
         Ok(LoginCredentials {
             account: account.to_string(),
@@ -221,14 +221,15 @@ impl AccountLogin {
         let challenge_message = self.create_challenge_message(challenge, &account_id)?;
         
         // Sign the challenge
-        let signature = credentials.private_key.sign_message(&challenge_message)?;
-        let public_key = credentials.private_key.to_public_key()?;
+        let challenge_hash = crate::ecc::hash::sha256(&challenge_message);
+        let signature = credentials.private_key.sign(&challenge_hash)?;
+        let public_key = credentials.private_key.public_key();
 
         Ok(LoginResponse {
             challenge_id: challenge_id.to_string(),
             account_id,
             signature: signature.to_hex(),
-            public_key: public_key.to_hex(),
+            public_key: public_key?.to_hex(),
             timestamp: now,
         })
     }
@@ -571,11 +572,11 @@ mod tests {
     #[test]
     fn test_credentials_from_wif() {
         let private_key = PrivateKey::generate().unwrap();
-        let wif = private_key.to_wif().unwrap();
+        let wif = private_key.to_wif(false).unwrap();
         
         let credentials = AccountLogin::credentials_from_wif(&wif, "testaccount").unwrap();
         assert_eq!(credentials.account, "testaccount");
-        assert_eq!(credentials.private_key.to_wif().unwrap(), wif);
+        assert_eq!(credentials.private_key.to_wif(false).unwrap(), wif);
     }
 
     #[test]

@@ -14,7 +14,7 @@ use std::str::FromStr;
 /// - space: Object space (usually 1 for protocol objects)
 /// - type: Object type (e.g., 1=account, 2=asset, 3=force_settlement, etc.)
 /// - instance: Unique instance number within the type
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, bincode::Encode, bincode::Decode)]
 pub struct ObjectId {
     space: u8,
     type_id: u8,
@@ -23,7 +23,18 @@ pub struct ObjectId {
 
 impl ObjectId {
     /// Create a new ObjectId
-    pub fn new(space: u8, type_id: u8, instance: u64) -> Self {
+    pub fn new(space: u8, type_id: u8, instance: u64) -> ChainResult<Self> {
+        let obj_id = Self {
+            space,
+            type_id,
+            instance,
+        };
+        obj_id.validate()?;
+        Ok(obj_id)
+    }
+
+    /// Create a new ObjectId without validation (for constants)
+    pub const fn new_unchecked(space: u8, type_id: u8, instance: u64) -> Self {
         Self {
             space,
             type_id,
@@ -52,7 +63,9 @@ impl ObjectId {
             id: id_str.to_string(),
         })?;
 
-        Ok(Self::new(space, type_id, instance))
+        let obj_id = Self::new_unchecked(space, type_id, instance);
+        obj_id.validate()?;
+        Ok(obj_id)
     }
 
     /// Get the space component
@@ -161,6 +174,11 @@ impl ObjectId {
         Ok(())
     }
 
+    /// Check if this ObjectId is valid
+    pub fn is_valid(&self) -> bool {
+        self.validate().is_ok()
+    }
+
     /// Convert to bytes for serialization
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::new();
@@ -187,7 +205,7 @@ impl ObjectId {
         })?;
         let instance = u64::from_le_bytes(instance_bytes);
 
-        let obj_id = Self::new(space, type_id, instance);
+        let obj_id = Self::new_unchecked(space, type_id, instance);
         obj_id.validate()?;
         Ok(obj_id)
     }
@@ -207,51 +225,34 @@ impl FromStr for ObjectId {
     }
 }
 
+impl Default for ObjectId {
+    fn default() -> Self {
+        // Default to null account (1.2.0)
+        Self::new_unchecked(1, 2, 0)
+    }
+}
+
 /// Common ObjectId constants for R-Squared blockchain
 pub mod constants {
     use super::ObjectId;
 
     /// Null account (1.2.0)
-    pub const NULL_ACCOUNT: ObjectId = ObjectId {
-        space: 1,
-        type_id: 2,
-        instance: 0,
-    };
+    pub const NULL_ACCOUNT: ObjectId = ObjectId::new_unchecked(1, 2, 0);
 
     /// Committee account (1.2.0)
-    pub const COMMITTEE_ACCOUNT: ObjectId = ObjectId {
-        space: 1,
-        type_id: 2,
-        instance: 0,
-    };
+    pub const COMMITTEE_ACCOUNT: ObjectId = ObjectId::new_unchecked(1, 2, 0);
 
     /// Witness account (1.2.1)
-    pub const WITNESS_ACCOUNT: ObjectId = ObjectId {
-        space: 1,
-        type_id: 2,
-        instance: 1,
-    };
+    pub const WITNESS_ACCOUNT: ObjectId = ObjectId::new_unchecked(1, 2, 1);
 
     /// Relaxed committee account (1.2.2)
-    pub const RELAXED_COMMITTEE_ACCOUNT: ObjectId = ObjectId {
-        space: 1,
-        type_id: 2,
-        instance: 2,
-    };
+    pub const RELAXED_COMMITTEE_ACCOUNT: ObjectId = ObjectId::new_unchecked(1, 2, 2);
 
     /// Proxy to self account (1.2.3)
-    pub const PROXY_TO_SELF_ACCOUNT: ObjectId = ObjectId {
-        space: 1,
-        type_id: 2,
-        instance: 3,
-    };
+    pub const PROXY_TO_SELF_ACCOUNT: ObjectId = ObjectId::new_unchecked(1, 2, 3);
 
     /// Core asset (1.3.0)
-    pub const CORE_ASSET: ObjectId = ObjectId {
-        space: 1,
-        type_id: 3,
-        instance: 0,
-    };
+    pub const CORE_ASSET: ObjectId = ObjectId::new_unchecked(1, 3, 0);
 }
 
 #[cfg(test)]
@@ -260,7 +261,7 @@ mod tests {
 
     #[test]
     fn test_object_id_creation() {
-        let obj_id = ObjectId::new(1, 2, 100);
+        let obj_id = ObjectId::new(1, 2, 100).unwrap();
         assert_eq!(obj_id.space(), 1);
         assert_eq!(obj_id.type_id(), 2);
         assert_eq!(obj_id.instance(), 100);
@@ -283,17 +284,17 @@ mod tests {
 
     #[test]
     fn test_object_id_display() {
-        let obj_id = ObjectId::new(1, 2, 100);
+        let obj_id = ObjectId::new_unchecked(1, 2, 100);
         assert_eq!(obj_id.to_string(), "1.2.100");
     }
 
     #[test]
     fn test_object_id_type_checks() {
-        let account_id = ObjectId::new(1, 1, 0);
+        let account_id = ObjectId::new_unchecked(1, 1, 0);
         assert!(account_id.is_account());
         assert!(!account_id.is_asset());
 
-        let asset_id = ObjectId::new(1, 2, 0);
+        let asset_id = ObjectId::new_unchecked(1, 2, 0);
         assert!(asset_id.is_asset());
         assert!(!asset_id.is_account());
     }
@@ -301,18 +302,18 @@ mod tests {
     #[test]
     fn test_object_id_validation() {
         let valid_id = ObjectId::new(1, 2, 100);
-        assert!(valid_id.validate().is_ok());
+        assert!(valid_id.is_ok());
 
         let invalid_space = ObjectId::new(0, 2, 100);
-        assert!(invalid_space.validate().is_err());
+        assert!(invalid_space.is_err());
 
         let invalid_type = ObjectId::new(1, 0, 100);
-        assert!(invalid_type.validate().is_err());
+        assert!(invalid_type.is_err());
     }
 
     #[test]
     fn test_object_id_bytes_conversion() {
-        let obj_id = ObjectId::new(1, 2, 100);
+        let obj_id = ObjectId::new_unchecked(1, 2, 100);
         let bytes = obj_id.to_bytes();
         let restored = ObjectId::from_bytes(&bytes).unwrap();
         assert_eq!(obj_id, restored);

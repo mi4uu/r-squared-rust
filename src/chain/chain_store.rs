@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
+use std::fmt;
 
 /// Cache entry with expiration time
 #[derive(Debug, Clone)]
@@ -61,10 +62,9 @@ impl Default for ChainStoreConfig {
 }
 
 /// Chain store for managing blockchain state
-#[derive(Debug)]
 pub struct ChainStore {
     /// Configuration
-    config: ChainStoreConfig,
+    pub config: ChainStoreConfig,
     /// Account cache
     accounts: Arc<RwLock<HashMap<ObjectId, CacheEntry<Account>>>>,
     /// Asset cache
@@ -578,6 +578,20 @@ impl ChainStore {
 impl Default for ChainStore {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl fmt::Debug for ChainStore {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ChainStore")
+            .field("config", &self.config)
+            .field("accounts_count", &self.accounts.read().unwrap().len())
+            .field("assets_count", &self.assets.read().unwrap().len())
+            .field("objects_count", &self.objects.read().unwrap().len())
+            .field("blocks_count", &self.blocks.read().unwrap().len())
+            .field("transactions_count", &self.transactions.read().unwrap().len())
+            .field("subscriptions_count", &self.subscriptions.read().unwrap().len())
+            .finish()
     }
 }
 

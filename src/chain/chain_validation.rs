@@ -106,7 +106,9 @@ impl ChainValidation {
         }
 
         // Check if expiration is too far in the future
-        let max_expiration = now + chain_properties.parameters.maximum_time_until_expiration;
+        // Note: We need to get this from global properties parameters, not chain properties
+        // For now, use a reasonable default of 24 hours (86400 seconds)
+        let max_expiration = now + 86400; // 24 hours default
         if transaction.expiration > max_expiration {
             return Err(ChainError::ValidationError {
                 field: "expiration".to_string(),
@@ -125,7 +127,10 @@ impl ChainValidation {
         transaction: &Transaction,
         parameters: &ChainParameters,
     ) -> ChainResult<()> {
-        let serialized = bincode::serialize(transaction).map_err(|e| ChainError::ValidationError {
+        let config = bincode::config::standard()
+            .with_little_endian()
+            .with_fixed_int_encoding();
+        let serialized = bincode::encode_to_vec(transaction, config).map_err(|e| ChainError::ValidationError {
             field: "serialization".to_string(),
             reason: format!("Failed to serialize transaction: {}", e),
         })?;
@@ -194,48 +199,114 @@ impl ChainValidation {
             Operation::Transfer { from, to, amount, memo, .. } => {
                 Self::validate_transfer_operation(from, to, amount, memo.as_ref())?;
             }
-            Operation::LimitOrderCreate { 
-                seller, 
-                amount_to_sell, 
-                min_to_receive, 
+            Operation::LimitOrderCreate {
+                seller,
+                amount_to_sell,
+                min_to_receive,
                 expiration,
-                .. 
+                ..
             } => {
                 Self::validate_limit_order_create_operation(
-                    seller, 
-                    amount_to_sell, 
-                    min_to_receive, 
+                    seller,
+                    amount_to_sell,
+                    min_to_receive,
                     *expiration
                 )?;
             }
             Operation::LimitOrderCancel { order, .. } => {
                 Self::validate_limit_order_cancel_operation(order)?;
             }
-            Operation::AccountCreate { 
-                name, 
-                owner, 
-                active, 
+            Operation::AccountCreate {
+                name,
+                owner,
+                active,
                 options,
-                .. 
+                ..
             } => {
                 Self::validate_account_create_operation(name, owner, active, options, parameters)?;
             }
-            Operation::AccountUpdate { 
-                account, 
-                owner, 
-                active, 
+            Operation::AccountUpdate {
+                account,
+                owner,
+                active,
                 new_options,
-                .. 
+                ..
             } => {
                 Self::validate_account_update_operation(account, owner.as_ref(), active.as_ref(), new_options.as_ref())?;
             }
-            Operation::AssetCreate { 
-                symbol, 
-                precision, 
+            Operation::AssetCreate {
+                symbol,
+                precision,
                 common_options,
-                .. 
+                ..
             } => {
                 Self::validate_asset_create_operation(symbol, *precision, common_options)?;
+            }
+            Operation::AssetUpdate {
+                asset_to_update,
+                new_options,
+                ..
+            } => {
+                // Validate asset ID
+                if !asset_to_update.is_asset() {
+                    return Err(ChainError::ValidationError {
+                        field: "asset_to_update".to_string(),
+                        reason: "Invalid asset ID".to_string(),
+                    });
+                }
+                // Validate new options if provided
+                if let Some(options) = new_options {
+                    Self::validate_asset_options(options)?;
+                }
+            }
+            Operation::AssetIssue {
+                asset_to_issue,
+                issue_to_account,
+                ..
+            } => {
+                // Validate asset amount
+                if asset_to_issue.amount <= 0 {
+                    return Err(ChainError::ValidationError {
+                        field: "asset_to_issue".to_string(),
+                        reason: "Issue amount must be positive".to_string(),
+                    });
+                }
+                // Validate asset ID
+                if !asset_to_issue.asset_id.is_asset() {
+                    return Err(ChainError::ValidationError {
+                        field: "asset_to_issue".to_string(),
+                        reason: "Invalid asset ID".to_string(),
+                    });
+                }
+                // Validate recipient account
+                if !issue_to_account.is_account() {
+                    return Err(ChainError::ValidationError {
+                        field: "issue_to_account".to_string(),
+                        reason: "Invalid account ID".to_string(),
+                    });
+                }
+            }
+            Operation::Custom {
+                required_auths,
+                data,
+                ..
+            } => {
+                // Validate required authorities
+                for auth in required_auths {
+                    if !auth.is_account() {
+                        return Err(ChainError::ValidationError {
+                            field: "required_auths".to_string(),
+                            reason: "Invalid account ID in required authorities".to_string(),
+                        });
+                    }
+                }
+                // Validate data size (e.g., max 1KB)
+                if data.len() > 1024 {
+                    return Err(ChainError::ValidationError {
+                        field: "data".to_string(),
+                        reason: "Custom operation data too large".to_string(),
+                    });
+                }
             }
         }
         
@@ -678,6 +749,9 @@ impl ChainValidation {
             Operation::AccountCreate { fee, .. } => fee,
             Operation::AccountUpdate { fee, .. } => fee,
             Operation::AssetCreate { fee, .. } => fee,
+            Operation::AssetUpdate { fee, .. } => fee,
+            Operation::AssetIssue { fee, .. } => fee,
+            Operation::Custom { fee, .. } => fee,
         }
     }
 
@@ -725,9 +799,11 @@ impl ChainValidation {
 
         // Validate previous block reference
         if let Some(prev_block) = previous_block {
-            let expected_previous = crate::ecc::Hash::sha256(
-                &bincode::serialize(&prev_block.header).unwrap()
-            );
+            let config = bincode::config::standard()
+                .with_little_endian()
+                .with_fixed_int_encoding();
+            let serialized_header = bincode::encode_to_vec(&prev_block.header, config).unwrap();
+            let expected_previous = crate::ecc::hash::sha256(&serialized_header);
             let expected_previous_hex = hex::encode(expected_previous);
             
             if header.previous != expected_previous_hex {

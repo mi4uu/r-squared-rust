@@ -7,7 +7,7 @@ use crate::chain::{
     chain_types::*,
     ObjectId,
 };
-use crate::ecc::{PrivateKey, PublicKey, Signature, Hash};
+use crate::ecc::{PrivateKey, PublicKey, Signature, hash};
 use crate::error::{ChainError, ChainResult, NetworkError};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -19,7 +19,10 @@ pub struct TransactionHelper;
 impl TransactionHelper {
     /// Serialize transaction to bytes
     pub fn serialize_transaction(transaction: &Transaction) -> ChainResult<Vec<u8>> {
-        bincode::serialize(transaction).map_err(|e| ChainError::ValidationError {
+        let config = bincode::config::standard()
+            .with_little_endian()
+            .with_fixed_int_encoding();
+        bincode::encode_to_vec(transaction, config).map_err(|e| ChainError::ValidationError {
             field: "serialization".to_string(),
             reason: format!("Failed to serialize transaction: {}", e),
         })
@@ -27,10 +30,14 @@ impl TransactionHelper {
 
     /// Deserialize transaction from bytes
     pub fn deserialize_transaction(data: &[u8]) -> ChainResult<Transaction> {
-        bincode::deserialize(data).map_err(|e| ChainError::ValidationError {
+        let config = bincode::config::standard()
+            .with_little_endian()
+            .with_fixed_int_encoding();
+        let (result, _) = bincode::decode_from_slice(data, config).map_err(|e| ChainError::ValidationError {
             field: "deserialization".to_string(),
             reason: format!("Failed to deserialize transaction: {}", e),
-        })
+        })?;
+        Ok(result)
     }
 
     /// Serialize transaction for signing (without signatures)
@@ -74,7 +81,7 @@ impl TransactionHelper {
         };
         
         let tx_bytes = Self::serialize_transaction(&tx_for_id)?;
-        let hash = Hash::sha256(&tx_bytes);
+        let hash = hash::sha256(&tx_bytes);
         Ok(hex::encode(hash))
     }
 
@@ -85,7 +92,8 @@ impl TransactionHelper {
         chain_id: &str,
     ) -> ChainResult<()> {
         let signing_data = Self::serialize_for_signing(transaction, chain_id)?;
-        let signature = private_key.sign_message(&signing_data)?;
+        let signing_hash = hash::sha256(&signing_data);
+        let signature = private_key.sign(&signing_hash)?;
         transaction.signatures.push(signature.to_hex());
         Ok(())
     }
@@ -97,9 +105,10 @@ impl TransactionHelper {
         chain_id: &str,
     ) -> ChainResult<()> {
         let signing_data = Self::serialize_for_signing(transaction, chain_id)?;
+        let signing_hash = hash::sha256(&signing_data);
         
         for private_key in private_keys {
-            let signature = private_key.sign_message(&signing_data)?;
+            let signature = private_key.sign(&signing_hash)?;
             transaction.signatures.push(signature.to_hex());
         }
         
@@ -146,7 +155,7 @@ impl TransactionHelper {
                 reason: "Invalid signature format".to_string(),
             })?;
             
-            let public_key = signature.recover_public_key(&signing_data)?;
+            let public_key = signature.recover_public_key()?;
             public_keys.push(public_key);
         }
         
@@ -282,7 +291,7 @@ impl TransactionHelper {
     ) -> ChainResult<Memo> {
         use crate::ecc::Aes;
         
-        let from_public_key = from_private_key.to_public_key()?;
+        let from_public_key = from_private_key.public_key()?;
         
         // Create shared secret using ECDH
         let shared_secret = from_private_key.create_shared_secret(to_public_key)?;
@@ -305,7 +314,7 @@ impl TransactionHelper {
     ) -> ChainResult<String> {
         use crate::ecc::Aes;
         
-        let my_public_key = private_key.to_public_key()?;
+        let my_public_key = private_key.public_key()?;
         let other_public_key = if memo.from == my_public_key.to_hex() {
             PublicKey::from_hex(&memo.to)?
         } else if memo.to == my_public_key.to_hex() {
@@ -392,6 +401,26 @@ impl TransactionHelper {
                 Operation::AssetCreate { issuer, .. } => {
                     if !required_accounts.contains(issuer) {
                         required_accounts.push(issuer.clone());
+                    }
+                }
+                Operation::AssetUpdate { issuer, .. } => {
+                    if !required_accounts.contains(issuer) {
+                        required_accounts.push(issuer.clone());
+                    }
+                }
+                Operation::AssetIssue { issuer, .. } => {
+                    if !required_accounts.contains(issuer) {
+                        required_accounts.push(issuer.clone());
+                    }
+                }
+                Operation::Custom { payer, required_auths, .. } => {
+                    if !required_accounts.contains(payer) {
+                        required_accounts.push(payer.clone());
+                    }
+                    for auth in required_auths {
+                        if !required_accounts.contains(auth) {
+                            required_accounts.push(auth.clone());
+                        }
                     }
                 }
             }

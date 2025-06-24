@@ -16,6 +16,3 @@ pub trait StorageAdapter {
     /// Check if key exists
     fn exists(&self, key: &str) -> StorageResult<bool>;
 }
-
-/// Storage result type alias
-pub type StorageResult<T> = Result<T, StorageError>;

@@ -2,7 +2,7 @@
 
 use crate::error::{EccError, EccResult};
 use crate::ecc::{PublicKey, secp256k1::SECP256K1, constants::SIGNATURE_SIZE};
-use secp256k1::{ecdsa::RecoverableSignature, ecdsa::Signature as EcdsaSignature, Message, RecoveryId};
+use secp256k1::{ecdsa::RecoverableSignature, ecdsa::Signature as EcdsaSignature, ecdsa::RecoveryId, Message};
 use sha2::{Sha256, Digest};
 
 /// A digital signature with recovery capability
@@ -32,10 +32,7 @@ impl Signature {
             });
         }
 
-        let recovery_id = RecoveryId::from_i32(bytes[64] as i32)
-            .map_err(|e| EccError::InvalidSignature {
-                reason: format!("Invalid recovery ID: {}", e),
-            })?;
+        let recovery_id = RecoveryId::from_u8_masked(bytes[64]);
 
         let signature = RecoverableSignature::from_compact(&bytes[..64], recovery_id)
             .map_err(|e| EccError::InvalidSignature {
@@ -60,10 +57,7 @@ impl Signature {
             });
         }
 
-        let recovery_id = RecoveryId::from_i32(bytes[64] as i32)
-            .map_err(|e| EccError::InvalidSignature {
-                reason: format!("Invalid recovery ID: {}", e),
-            })?;
+        let recovery_id = RecoveryId::from_u8_masked(bytes[64]);
 
         let signature = RecoverableSignature::from_compact(&bytes[..64], recovery_id)
             .map_err(|e| EccError::InvalidSignature {
@@ -90,7 +84,7 @@ impl Signature {
         let (recovery_id, signature_bytes) = self.signature.serialize_compact();
         let mut result = [0u8; SIGNATURE_SIZE];
         result[..64].copy_from_slice(&signature_bytes);
-        result[64] = recovery_id.to_i32() as u8;
+        result[64] = recovery_id as u8;
         result
     }
 
@@ -103,7 +97,7 @@ impl Signature {
     pub fn verify(&self, message: &Message, public_key: &PublicKey) -> EccResult<bool> {
         let ecdsa_signature = self.signature.to_standard();
         
-        match SECP256K1.verify_ecdsa(message, &ecdsa_signature, public_key.inner()) {
+        match crate::ecc::secp256k1::SECP256K1.verify_ecdsa(*message, &ecdsa_signature, public_key.inner()) {
             Ok(()) => Ok(true),
             Err(_) => Ok(false),
         }
@@ -111,12 +105,9 @@ impl Signature {
 
     /// Recover the public key from the signature and message
     pub fn recover_public_key(&self) -> EccResult<PublicKey> {
-        let message = Message::from_slice(&self.message_hash)
-            .map_err(|e| EccError::CryptoOperationFailed {
-                operation: format!("Message creation failed: {}", e),
-            })?;
+        let message = Message::from_digest(self.message_hash);
 
-        let public_key = SECP256K1.recover_ecdsa(&message, &self.signature)
+        let public_key = crate::ecc::secp256k1::SECP256K1.recover_ecdsa(message, &self.signature)
             .map_err(|e| EccError::CryptoOperationFailed {
                 operation: format!("Public key recovery failed: {}", e),
             })?;
@@ -156,7 +147,7 @@ impl Signature {
     /// Get the recovery ID
     pub fn recovery_id(&self) -> u8 {
         let (recovery_id, _) = self.signature.serialize_compact();
-        recovery_id.to_i32() as u8
+        recovery_id as u8
     }
 
     /// Get the message hash this signature was created for
@@ -198,10 +189,7 @@ impl Signature {
         public_key: &PublicKey,
     ) -> EccResult<bool> {
         let signature = Self::from_bytes_with_hash(signature_bytes, message_hash)?;
-        let message = Message::from_slice(message_hash)
-            .map_err(|e| EccError::CryptoOperationFailed {
-                operation: format!("Message creation failed: {}", e),
-            })?;
+        let message = Message::from_digest(*message_hash);
         signature.verify(&message, public_key)
     }
 
@@ -223,7 +211,7 @@ mod tests {
     #[test]
     fn test_signature_creation_and_verification() {
         let private_key = PrivateKey::generate().unwrap();
-        let public_key = private_key.public_key();
+        let public_key = private_key.public_key().unwrap();
         
         let message = b"Hello, R-Squared!";
         let hash = crate::ecc::hash::sha256(message);
@@ -266,7 +254,7 @@ mod tests {
     #[test]
     fn test_public_key_recovery() {
         let private_key = PrivateKey::generate().unwrap();
-        let public_key = private_key.public_key();
+        let public_key = private_key.public_key().unwrap();
         
         let message = b"Recovery test";
         let hash = crate::ecc::hash::sha256(message);

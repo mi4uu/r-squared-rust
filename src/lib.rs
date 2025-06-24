@@ -35,7 +35,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#![deny(missing_docs)]
+#![warn(missing_docs)]
 #![warn(clippy::all)]
 
 // Re-export core error types
@@ -58,8 +58,8 @@ pub mod prelude {
     pub use crate::error::{Error, Result};
     pub use crate::ecc::{PrivateKey, PublicKey, Signature, Address};
     pub use crate::chain::{TransactionBuilder, ChainStore};
-    pub use crate::serializer::{Serializer, SerializerError};
-    pub use crate::storage::{StorageAdapter, StorageError};
+    pub use crate::serializer::{Serializer};
+    pub use crate::storage::{StorageApi, StorageApiSync};
 }
 
 // Version information

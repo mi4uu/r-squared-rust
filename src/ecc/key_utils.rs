@@ -66,13 +66,16 @@ impl KeyUtils {
         hasher.update(&index.to_be_bytes());
         let hash = hasher.finalize();
         
-        PrivateKey::from_bytes(&hash.into())
+        PrivateKey::from_bytes(hash.as_slice())
     }
 
     /// Validate key pair (check if public key matches private key)
     pub fn validate_key_pair(private_key: &PrivateKey, public_key: &PublicKey) -> bool {
-        let derived_public = private_key.public_key();
-        derived_public == *public_key
+        if let Ok(derived_public) = private_key.public_key() {
+            derived_public == *public_key
+        } else {
+            false
+        }
     }
 
     /// Convert between different key formats
@@ -89,7 +92,9 @@ impl KeyUtils {
         } else if let Ok(bytes) = hex::decode(input) {
             // Input is hex
             if bytes.len() == 32 {
-                let private_key = PrivateKey::from_bytes(&bytes.try_into().unwrap())?;
+                let mut key_bytes = [0u8; 32];
+                key_bytes.copy_from_slice(&bytes);
+                let private_key = PrivateKey::from_bytes(&key_bytes)?;
                 match output_format {
                     KeyFormat::Hex => Ok(input.to_string()),
                     KeyFormat::WifCompressed => Ok(private_key.to_wif(true)),
@@ -104,7 +109,9 @@ impl KeyUtils {
         } else if let Ok(bytes) = input.from_base58() {
             // Input is base58
             if bytes.len() == 32 {
-                let private_key = PrivateKey::from_bytes(&bytes.try_into().unwrap())?;
+                let mut key_bytes = [0u8; 32];
+                key_bytes.copy_from_slice(&bytes);
+                let private_key = PrivateKey::from_bytes(&key_bytes)?;
                 match output_format {
                     KeyFormat::Hex => Ok(hex::encode(bytes)),
                     KeyFormat::WifCompressed => Ok(private_key.to_wif(true)),
@@ -228,7 +235,7 @@ impl KeyUtils {
             data.extend_from_slice(&parent_key.to_bytes());
         } else {
             // Non-hardened derivation
-            data.extend_from_slice(&parent_key.public_key().to_bytes());
+            data.extend_from_slice(&parent_key.public_key()?.to_bytes());
         }
         
         data.extend_from_slice(&index.to_be_bytes());
@@ -237,7 +244,9 @@ impl KeyUtils {
         let child_key_bytes = &hmac_result[..32];
         let child_chain_code = &hmac_result[32..];
         
-        let child_key = PrivateKey::from_bytes(child_key_bytes.try_into().unwrap())?;
+        let mut key_bytes = [0u8; 32];
+        key_bytes.copy_from_slice(child_key_bytes);
+        let child_key = PrivateKey::from_bytes(&key_bytes)?;
         let mut chain_code_array = [0u8; 32];
         chain_code_array.copy_from_slice(child_chain_code);
         
@@ -449,8 +458,8 @@ mod tests {
         let public_key = private_key.public_key();
         let wrong_public_key = PrivateKey::generate().unwrap().public_key();
         
-        assert!(KeyUtils::validate_key_pair(&private_key, &public_key));
-        assert!(!KeyUtils::validate_key_pair(&private_key, &wrong_public_key));
+        assert!(KeyUtils::validate_key_pair(&private_key, &public_key.unwrap()));
+        assert!(!KeyUtils::validate_key_pair(&private_key, &wrong_public_key.unwrap()));
     }
 
     #[test]
