@@ -1,0 +1,109 @@
+[package]
+name = "r-squared-rust"
+version = "0.1.0"
+edition = "2021"
+authors = ["R-Squared Labs LLC <rsquaredlabscontact@gmail.com>"]
+description = "Pure Rust R-Squared library for blockchain operations, cryptography, and data serialization"
+license = "MIT"
+repository = "https://github.com/R-Squared-Project/R-Squared-rust"
+homepage = "https://github.com/R-Squared-Project/R-Squared-rust"
+documentation = "https://docs.rs/r-squared-rust"
+keywords = ["blockchain", "cryptography", "serialization", "r-squared"]
+categories = ["cryptography", "encoding", "web-programming"]
+readme = "README.md"
+rust-version = "1.70"
+
+[lib]
+name = "r_squared_rust"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["std"]
+std = []
+wasm = ["wasm-bindgen", "js-sys", "web-sys", "getrandom/js"]
+async = ["tokio", "futures"]
+s3 = ["aws-sdk-s3", "aws-config", "async"]
+ipfs = ["ipfs-api-backend-hyper", "async"]
+serde_support = ["serde", "serde_json"]
+
+[dependencies]
+# Core cryptographic dependencies
+secp256k1 = { version = "0.31", features = ["recovery", "global-context"] }
+sha2 = "0.10"
+sha3 = "0.10"
+ripemd = "0.1"
+aes = "0.8"
+cbc = { version = "0.1", features = ["alloc"] }
+hmac = "0.12"
+pbkdf2 = "0.12"
+scrypt = "0.11"
+
+# Encoding and serialization
+base58 = "0.2"
+base64 = "0.22"
+hex = "0.4"
+bincode = "2.0.1"
+serde = { version = "1.0", features = ["derive"], optional = true }
+serde_json = { version = "1.0", optional = true }
+
+# Error handling
+thiserror = "2"
+
+tracing = { version = "0.1.41", features = ["log"] }
+# use instead of anyhow
+color-eyre = { version = "0.6", features = [
+  "capture-spantrace",
+  "track-caller",
+  "color-spantrace",
+  "tracing-error",
+] }
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+log = { version = "0.4", features = ["serde"] }
+
+# Async runtime (optional)
+tokio = { version = "1.0", features = ["full"], optional = true }
+futures = { version = "0.3", optional = true }
+
+# Storage backends (optional)
+aws-sdk-s3 = { version = "1.0", optional = true }
+aws-config = { version = "1.0", optional = true }
+ipfs-api-backend-hyper = { version = "0.6", optional = true }
+
+# WASM support (optional)
+wasm-bindgen = { version = "0.2", optional = true }
+js-sys = { version = "0.3", optional = true }
+web-sys = { version = "0.3", optional = true }
+getrandom = { version = "0.3", features = ["js"], optional = true }
+
+# Utilities
+rand = "0.9"
+zeroize = { version = "1.6", features = ["zeroize_derive"] }
+subtle = "2.5"
+generic-array = "1.2"
+byteorder = "1.4"
+bytes = "1.4"
+
+[dev-dependencies]
+criterion = { version = "0.6", features = ["html_reports"] }
+proptest = "1.2"
+tokio-test = "0.4"
+tempfile = "3.6"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+web-sys = "0.3"
+getrandom = { version = "0.3.3", features = ["js"] }
+
+[[bench]]
+name = "crypto_benchmarks"
+harness = false
+
+[[bench]]
+name = "serialization_benchmarks"
+harness = false
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
