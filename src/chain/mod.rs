@@ -303,3 +303,97 @@ pub mod utils {
             },
         };
         
+        let options = AssetOptions {
+            max_supply,
+            market_fee_percent: 0,
+            max_market_fee: 0,
+            issuer_permissions: 0,
+            flags: 0,
+            core_exchange_rate,
+            whitelist_authorities: vec![],
+            blacklist_authorities: vec![],
+            whitelist_markets: vec![],
+            blacklist_markets: vec![],
+            description: String::new(),
+            extensions: vec![],
+        };
+        
+        builder.add_asset_create(
+            issuer,
+            symbol.to_string(),
+            precision,
+            options,
+            None, // bitasset_opts
+            false, // is_prediction_market
+        )?;
+        
+        Ok(builder)
+    }
+
+    /// Parse object ID from string
+    pub fn parse_object_id(id_str: &str) -> ChainResult<ObjectId> {
+        ObjectId::from_string(id_str)
+    }
+
+    /// Create asset amount
+    pub fn create_asset_amount(amount: i64, asset_id: ObjectId) -> AssetAmount {
+        ChainTypes::create_asset_amount(amount, asset_id)
+    }
+
+    /// Validate account name
+    pub fn validate_account_name(name: &str) -> ChainResult<()> {
+        ChainTypes::validate_account_name(name)
+    }
+
+    /// Validate asset symbol
+    pub fn validate_asset_symbol(symbol: &str) -> ChainResult<()> {
+        ChainTypes::validate_asset_symbol(symbol)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_chain_creation() {
+        let chain = Chain::new();
+        assert_eq!(chain.transaction_operations_count(), 0);
+    }
+
+    #[test]
+    fn test_constants() {
+        assert_eq!(constants::MAX_TRANSACTION_SIZE, 1024 * 1024);
+        assert_eq!(constants::BLOCK_TIME_SECONDS, 3);
+        assert_eq!(constants::MAX_OPERATIONS_PER_TRANSACTION, 100);
+    }
+
+    #[test]
+    fn test_utils_parse_object_id() {
+        let obj_id = utils::parse_object_id("1.2.100").unwrap();
+        assert_eq!(obj_id.space(), 1);
+        assert_eq!(obj_id.type_id(), 2);
+        assert_eq!(obj_id.instance(), 100);
+    }
+
+    #[test]
+    fn test_utils_create_asset_amount() {
+        let asset_id = ObjectId::new(1, 3, 0).unwrap();
+        let amount = utils::create_asset_amount(10000, asset_id.clone());
+        assert_eq!(amount.amount, 10000);
+        assert_eq!(amount.asset_id, asset_id);
+    }
+
+    #[test]
+    fn test_utils_validate_names() {
+        assert!(utils::validate_account_name("alice").is_ok());
+        assert!(utils::validate_account_name("Alice").is_err());
+        
+        assert!(utils::validate_asset_symbol("BTC").is_ok());
+        assert!(utils::validate_asset_symbol("btc").is_err());
+    }
+
+    #[test]
+    fn test_chain_transaction_operations() {
+        let mut chain = Chain::new();
+        
