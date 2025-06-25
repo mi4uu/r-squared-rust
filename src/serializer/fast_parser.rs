@@ -6,7 +6,7 @@
 use crate::error::{SerializerError, SerializerResult};
 use crate::serializer::SerializerUtils;
 use std::collections::HashMap;
-use std::io::Read;
+use std::io::{Read, Cursor};
 
 /// High-performance binary data parser
 pub struct FastParser {

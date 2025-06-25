@@ -8,6 +8,7 @@ use crate::chain::{
     ObjectId,
 };
 use crate::error::{ChainError, ChainResult};
+use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Chain validation utility struct

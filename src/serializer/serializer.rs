@@ -10,6 +10,10 @@ use std::time::Instant;
 #[cfg(feature = "serde_support")]
 use serde::{Serialize, de::DeserializeOwned};
 
+// For test code, always import serde traits
+#[cfg(test)]
+use serde::{Deserialize, de::DeserializeOwned as TestDeserializeOwned};
+
 /// Main serializer for blockchain data
 pub struct Serializer {
     /// Buffer capacity for serialization operations
