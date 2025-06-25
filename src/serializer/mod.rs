@@ -139,10 +139,11 @@ impl SerializerApi {
             SerializerValidation::validate_before_serialization(data)?;
         }
 
+        let serializer = Serializer::new();
         let result = match self.config.format {
-            SerializationFormat::Binary => Serializer::serialize_binary(data),
-            SerializationFormat::Json => Serializer::serialize_json(data),
-            SerializationFormat::Compact => Serializer::serialize_compact(data),
+            SerializationFormat::Binary => serializer.serialize_binary(data),
+            SerializationFormat::Json => serializer.serialize_json(data),
+            SerializationFormat::Compact => serializer.serialize_compact(data),
         }?;
 
         if result.len() > self.config.max_size {

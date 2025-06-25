@@ -11,19 +11,36 @@ use std::time::Instant;
 use serde::{Serialize, Deserialize, de::DeserializeOwned};
 
 /// Main serializer for blockchain data
-pub struct Serializer;
+pub struct Serializer {
+    /// Buffer capacity for serialization operations
+    buffer_capacity: usize,
+}
 
 impl Serializer {
+    /// Create a new serializer with default buffer capacity
+    pub fn new() -> Self {
+        Self {
+            buffer_capacity: super::constants::DEFAULT_BUFFER_SIZE,
+        }
+    }
+
+    /// Create a new serializer with specified buffer capacity
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            buffer_capacity: capacity,
+        }
+    }
+
     /// Serialize data to bytes using the default binary format
-    pub fn serialize<T>(data: &T) -> SerializerResult<Vec<u8>>
+    pub fn serialize<T>(&self, data: &T) -> SerializerResult<Vec<u8>>
     where
         T: Serialize + bincode::Encode,
     {
-        Self::serialize_binary(data)
+        self.serialize_binary(data)
     }
 
     /// Deserialize data from bytes using the default binary format
-    pub fn deserialize<T>(bytes: &[u8]) -> SerializerResult<T>
+    pub fn deserialize<T>(&self, bytes: &[u8]) -> SerializerResult<T>
     where
         T: DeserializeOwned + bincode::Decode<()>,
     {
@@ -31,7 +48,7 @@ impl Serializer {
     }
 
     /// Serialize data to binary format using bincode
-    pub fn serialize_binary<T>(data: &T) -> SerializerResult<Vec<u8>>
+    pub fn serialize_binary<T>(&self, data: &T) -> SerializerResult<Vec<u8>>
     where
         T: Serialize + bincode::Encode,
     {
@@ -119,7 +136,7 @@ impl Serializer {
     }
 
     /// Serialize data to JSON format
-    pub fn serialize_json<T>(data: &T) -> SerializerResult<Vec<u8>>
+    pub fn serialize_json<T>(&self, data: &T) -> SerializerResult<Vec<u8>>
     where
         T: Serialize,
     {
@@ -197,7 +214,7 @@ impl Serializer {
     }
 
     /// Serialize data to compact binary format
-    pub fn serialize_compact<T>(data: &T) -> SerializerResult<Vec<u8>>
+    pub fn serialize_compact<T>(&self, data: &T) -> SerializerResult<Vec<u8>>
     where
         T: Serialize + bincode::Encode,
     {
@@ -206,7 +223,7 @@ impl Serializer {
         SerializerValidation::validate_before_serialization(data)?;
 
         // First serialize to binary
-        let binary_data = Self::serialize_binary(data)?;
+        let binary_data = self.serialize_binary(data)?;
         
         // Then compress
         let compressed = SerializerUtils::compress(&binary_data)?;
@@ -257,16 +274,16 @@ impl Serializer {
     }
 
     /// Serialize with automatic format detection based on data size
-    pub fn serialize_auto<T>(data: &T) -> SerializerResult<Vec<u8>>
+    pub fn serialize_auto<T>(&self, data: &T) -> SerializerResult<Vec<u8>>
     where
         T: Serialize + bincode::Encode,
     {
         // Try binary first
-        let binary_result = Self::serialize_binary(data)?;
+        let binary_result = self.serialize_binary(data)?;
         
         // If data is large, try compact format
         if binary_result.len() > 1024 {
-            let compact_result = Self::serialize_compact(data)?;
+            let compact_result = self.serialize_compact(data)?;
             if compact_result.len() < binary_result.len() {
                 return Ok(compact_result);
             }
@@ -300,11 +317,11 @@ impl Serializer {
     }
 
     /// Serialize with checksum for integrity verification
-    pub fn serialize_with_checksum<T>(data: &T) -> SerializerResult<Vec<u8>>
+    pub fn serialize_with_checksum<T>(&self, data: &T) -> SerializerResult<Vec<u8>>
     where
         T: Serialize + bincode::Encode,
     {
-        let serialized = Self::serialize_binary(data)?;
+        let serialized = self.serialize_binary(data)?;
         let checksum = SerializerUtils::calculate_checksum(&serialized);
         
         let mut result = Vec::with_capacity(serialized.len() + 4);
@@ -380,7 +397,7 @@ impl Serializer {
     }
 
     /// Batch serialize multiple items
-    pub fn serialize_batch<T>(items: &[T]) -> SerializerResult<Vec<u8>>
+    pub fn serialize_batch<T>(&self, items: &[T]) -> SerializerResult<Vec<u8>>
     where
         T: Serialize + bincode::Encode,
     {
@@ -399,7 +416,7 @@ impl Serializer {
         
         // Serialize each item
         for item in items {
-            let item_data = Self::serialize_binary(item)?;
+            let item_data = self.serialize_binary(item)?;
             result.extend_from_slice(&(item_data.len() as u32).to_le_bytes());
             result.extend_from_slice(&item_data);
         }
@@ -480,7 +497,7 @@ impl Serializer {
 mod tests {
     use super::*;
 
-    #[derive(Serialize, Deserialize, Debug, PartialEq)]
+    #[derive(Serialize, Deserialize, Debug, PartialEq, bincode::Encode, bincode::Decode)]
     struct TestData {
         id: u32,
         name: String,
@@ -495,7 +512,8 @@ mod tests {
             values: vec![1, 2, 3, 4, 5],
         };
 
-        let serialized = Serializer::serialize_binary(&data).unwrap();
+        let serializer = Serializer::new();
+        let serialized = serializer.serialize_binary(&data).unwrap();
         let deserialized: TestData = Serializer::deserialize_binary(&serialized).unwrap();
 
         assert_eq!(data, deserialized);
@@ -509,7 +527,8 @@ mod tests {
             values: vec![1, 2, 3, 4, 5],
         };
 
-        let serialized = Serializer::serialize_json(&data).unwrap();
+        let serializer = Serializer::new();
+        let serialized = serializer.serialize_json(&data).unwrap();
         let deserialized: TestData = Serializer::deserialize_json(&serialized).unwrap();
 
         assert_eq!(data, deserialized);
@@ -523,7 +542,8 @@ mod tests {
             values: vec![1, 2, 3, 4, 5],
         };
 
-        let serialized = Serializer::serialize_compact(&data).unwrap();
+        let serializer = Serializer::new();
+        let serialized = serializer.serialize_compact(&data).unwrap();
         let deserialized: TestData = Serializer::deserialize_compact(&serialized).unwrap();
 
         assert_eq!(data, deserialized);
@@ -537,18 +557,20 @@ mod tests {
             values: vec![1, 2, 3, 4, 5],
         };
 
+        let serializer = Serializer::new();
+
         // Test binary format
-        let binary = Serializer::serialize_binary(&data).unwrap();
+        let binary = serializer.serialize_binary(&data).unwrap();
         let deserialized: TestData = Serializer::deserialize_auto(&binary).unwrap();
         assert_eq!(data, deserialized);
 
         // Test compact format
-        let compact = Serializer::serialize_compact(&data).unwrap();
+        let compact = serializer.serialize_compact(&data).unwrap();
         let deserialized: TestData = Serializer::deserialize_auto(&compact).unwrap();
         assert_eq!(data, deserialized);
 
         // Test JSON format
-        let json = Serializer::serialize_json(&data).unwrap();
+        let json = serializer.serialize_json(&data).unwrap();
         let deserialized: TestData = Serializer::deserialize_auto(&json).unwrap();
         assert_eq!(data, deserialized);
     }
@@ -561,7 +583,8 @@ mod tests {
             values: vec![1, 2, 3, 4, 5],
         };
 
-        let serialized = Serializer::serialize_with_checksum(&data).unwrap();
+        let serializer = Serializer::new();
+        let serialized = serializer.serialize_with_checksum(&data).unwrap();
         let deserialized: TestData = Serializer::deserialize_with_checksum(&serialized).unwrap();
 
         assert_eq!(data, deserialized);
@@ -580,7 +603,8 @@ mod tests {
             TestData { id: 3, name: "third".to_string(), values: vec![5, 6] },
         ];
 
-        let serialized = Serializer::serialize_batch(&items).unwrap();
+        let serializer = Serializer::new();
+        let serialized = serializer.serialize_batch(&items).unwrap();
         let deserialized: Vec<TestData> = Serializer::deserialize_batch(&serialized).unwrap();
 
         assert_eq!(items, deserialized);
@@ -594,15 +618,16 @@ mod tests {
             values: vec![1, 2, 3, 4, 5],
         };
 
-        let binary = Serializer::serialize_binary(&data).unwrap();
+        let serializer = Serializer::new();
+        let binary = serializer.serialize_binary(&data).unwrap();
         let info = Serializer::get_format_info(&binary).unwrap();
         assert!(info.contains("Binary format"));
 
-        let compact = Serializer::serialize_compact(&data).unwrap();
+        let compact = serializer.serialize_compact(&data).unwrap();
         let info = Serializer::get_format_info(&compact).unwrap();
         assert_eq!(info, "Compact binary format");
 
-        let json = Serializer::serialize_json(&data).unwrap();
+        let json = serializer.serialize_json(&data).unwrap();
         let info = Serializer::get_format_info(&json).unwrap();
         assert_eq!(info, "JSON format");
     }

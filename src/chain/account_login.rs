@@ -526,7 +526,7 @@ mod tests {
 
     fn create_test_account() -> Account {
         let private_key = PrivateKey::generate().unwrap();
-        let public_key = private_key.to_public_key().unwrap();
+        let public_key = private_key.public_key().unwrap();
         
         let mut key_auths = HashMap::new();
         key_auths.insert(public_key.to_hex(), 1);
@@ -572,11 +572,11 @@ mod tests {
     #[test]
     fn test_credentials_from_wif() {
         let private_key = PrivateKey::generate().unwrap();
-        let wif = private_key.to_wif(false).unwrap();
+        let wif = private_key.to_wif(false);
         
         let credentials = AccountLogin::credentials_from_wif(&wif, "testaccount").unwrap();
         assert_eq!(credentials.account, "testaccount");
-        assert_eq!(credentials.private_key.to_wif(false).unwrap(), wif);
+        assert_eq!(credentials.private_key.to_wif(false), wif);
     }
 
     #[test]
@@ -608,7 +608,7 @@ mod tests {
         let response = login_manager.respond_to_challenge(
             &challenge.challenge_id,
             &credentials,
-            account_id,
+            account_id.clone(),
         ).unwrap();
         
         assert_eq!(response.challenge_id, challenge.challenge_id);

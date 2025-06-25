@@ -272,18 +272,42 @@ impl PrecisionNumber {
             });
         }
 
-        // To maintain precision, we need to scale up the dividend
-        let scale_factor = 10_i128.pow(other.precision as u32);
+        // For division: (a/10^p1) / (b/10^p2) = (a * 10^p2) / (b * 10^p1)
+        // Result precision should be at least max(p1, p2) + extra for accuracy
+        let result_precision = std::cmp::max(self.precision, other.precision) + 2;
+        let result_precision = std::cmp::min(result_precision, Self::MAX_PRECISION);
+        
+        // Scale dividend by (10^result_precision) to maintain precision in result
+        let scale_factor = 10_i128.pow(result_precision as u32);
         let scaled_dividend = self.raw_value.checked_mul(scale_factor).ok_or_else(|| ChainError::ValidationError {
             field: "value".to_string(),
             reason: "Overflow during division scaling".to_string(),
         })?;
 
-        let result = scaled_dividend / other.raw_value;
+        // Scale divisor by its precision to convert to integer
+        let divisor_scale = 10_i128.pow(other.precision as u32);
+        let scaled_divisor = other.raw_value;
+
+        // Adjust for self precision
+        let self_scale = 10_i128.pow(self.precision as u32);
+        
+        // Final calculation: (scaled_dividend / self_scale) / (scaled_divisor / divisor_scale)
+        // = (scaled_dividend * divisor_scale) / (scaled_divisor * self_scale)
+        let final_dividend = scaled_dividend.checked_mul(divisor_scale).ok_or_else(|| ChainError::ValidationError {
+            field: "value".to_string(),
+            reason: "Overflow during division calculation".to_string(),
+        })?;
+        
+        let final_divisor = scaled_divisor.checked_mul(self_scale).ok_or_else(|| ChainError::ValidationError {
+            field: "value".to_string(),
+            reason: "Overflow during division calculation".to_string(),
+        })?;
+
+        let result = final_dividend / final_divisor;
 
         Ok(Self {
             raw_value: result,
-            precision: self.precision,
+            precision: result_precision,
         })
     }
 
@@ -426,21 +450,55 @@ impl NumberUtils {
         }
 
         // Newton's method for square root
-        let two = PrecisionNumber::from_integer(2, number.precision())?;
+        let target_precision = number.precision();
+        let two = PrecisionNumber::from_integer(2, target_precision)?;
         let mut x = *number;
-        let mut prev_x = PrecisionNumber::from_integer(0, number.precision())?;
+        let mut prev_x = PrecisionNumber::from_integer(0, target_precision)?;
 
         // Iterate until convergence
         for _ in 0..50 {
-            if x.subtract(&prev_x)?.abs().raw_value() <= 1 {
+            // Ensure both x and prev_x have the same precision before subtraction
+            let x_adjusted = x.to_precision(target_precision)?;
+            let prev_x_adjusted = prev_x.to_precision(target_precision)?;
+            
+            if x_adjusted.subtract(&prev_x_adjusted)?.abs().raw_value() <= 1 {
                 break;
             }
-            prev_x = x;
-            let quotient = number.divide(&x)?;
-            x = x.add(&quotient)?.divide(&two)?;
+            prev_x = x_adjusted;
+            let quotient = number.divide(&x_adjusted)?;
+            // Convert quotient to target precision to match x
+            let quotient_adjusted = quotient.to_precision(target_precision)?;
+            let sum = x_adjusted.add(&quotient_adjusted)?;
+            x = sum.divide(&two)?;
+            // Ensure x maintains target precision
+            x = x.to_precision(target_precision)?;
         }
 
         Ok(x)
+    }
+
+    /// Format asset amount with given precision for display
+    pub fn format_asset_amount(amount: i64, precision: u8) -> String {
+        let precision_number = PrecisionNumber::new(amount as i128, precision)
+            .unwrap_or_else(|_| PrecisionNumber::new(0, precision).unwrap());
+        
+        // Format with full precision (including trailing zeros)
+        let divisor = 10_i128.pow(precision as u32);
+        let integer_part = precision_number.raw_value() / divisor;
+        let fractional_part = (precision_number.raw_value() % divisor).abs();
+        
+        if precision == 0 {
+            format!("{}", integer_part)
+        } else {
+            let fractional_str = format!("{:0width$}", fractional_part, width = precision as usize);
+            format!("{}.{}", integer_part, fractional_str)
+        }
+    }
+
+    /// Parse asset amount string with given precision
+    pub fn parse_asset_amount(amount_str: &str, precision: u8) -> ChainResult<i64> {
+        let precision_number = PrecisionNumber::from_string(amount_str, precision)?;
+        Self::precision_to_asset_amount(&precision_number)
     }
 }
 

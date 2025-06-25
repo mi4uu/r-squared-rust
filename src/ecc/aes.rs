@@ -34,20 +34,22 @@ impl Aes {
             }
         };
 
-        // Pad data to block size (16 bytes for AES)
-        let padded_data = Self::pkcs7_pad(data, 16);
-
-        // Encrypt
+        // Encrypt with automatic PKCS7 padding
         let cipher = Aes256CbcEnc::new(&derived_key.into(), &iv_bytes.into());
-        let mut encrypted = padded_data.clone();
-        cipher.encrypt_padded_mut::<cbc::cipher::block_padding::Pkcs7>(&mut encrypted, padded_data.len())
+        let mut data_buf = data.to_vec();
+        // Add padding space to buffer
+        let block_size = 16;
+        let padding_len = block_size - (data.len() % block_size);
+        data_buf.resize(data.len() + padding_len, 0);
+        
+        let encrypted = cipher.encrypt_padded_mut::<cbc::cipher::block_padding::Pkcs7>(&mut data_buf, data.len())
             .map_err(|e| EccError::EncryptionError {
                 reason: format!("AES encryption failed: {:?}", e),
             })?;
 
         // Prepend IV to encrypted data
         let mut result = iv_bytes.to_vec();
-        result.extend_from_slice(&encrypted);
+        result.extend_from_slice(encrypted);
         
         Ok(result)
     }
@@ -67,17 +69,15 @@ impl Aes {
         // Derive 256-bit key from input
         let derived_key = Self::derive_key(key);
 
-        // Decrypt
+        // Decrypt with automatic PKCS7 unpadding
         let cipher = Aes256CbcDec::new(&derived_key.into(), iv.into());
-        let mut decrypted = ciphertext.to_vec();
-        let decrypted_len = cipher.decrypt_padded_mut::<cbc::cipher::block_padding::Pkcs7>(&mut decrypted)
+        let mut ciphertext_buf = ciphertext.to_vec();
+        let decrypted = cipher.decrypt_padded_mut::<cbc::cipher::block_padding::Pkcs7>(&mut ciphertext_buf)
             .map_err(|e| EccError::EncryptionError {
                 reason: format!("AES decryption failed: {:?}", e),
-            })?
-            .len();
+            })?;
 
-        decrypted.truncate(decrypted_len);
-        Ok(decrypted)
+        Ok(decrypted.to_vec())
     }
 
     /// Encrypt memo data with checksum validation (R-Squared specific)
@@ -214,13 +214,26 @@ impl Aes {
         hash::sha256(input)
     }
 
-    /// Create shared secret for memo encryption (simplified ECDH)
+    /// Create shared secret for memo encryption using proper ECDH
     fn create_shared_secret(private_key: &[u8], public_key: &[u8]) -> EccResult<[u8; 32]> {
-        // Simplified shared secret creation
-        // In a real implementation, this would use proper ECDH
-        let mut combined = private_key.to_vec();
-        combined.extend_from_slice(public_key);
-        Ok(hash::sha256(&combined))
+        use secp256k1::{SecretKey, PublicKey as Secp256k1PublicKey, ecdh::SharedSecret};
+        
+        // Convert bytes to secp256k1 types
+        let secret_key = SecretKey::from_slice(private_key)
+            .map_err(|e| EccError::EncryptionError {
+                reason: format!("Invalid private key for ECDH: {}", e),
+            })?;
+            
+        let public_key = Secp256k1PublicKey::from_slice(public_key)
+            .map_err(|e| EccError::EncryptionError {
+                reason: format!("Invalid public key for ECDH: {}", e),
+            })?;
+        
+        // Perform ECDH to get shared secret
+        let shared_secret = SharedSecret::new(&public_key, &secret_key);
+        
+        
+        Ok(shared_secret.secret_bytes())
     }
 
     /// PKCS#7 padding

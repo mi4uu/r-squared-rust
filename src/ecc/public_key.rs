@@ -12,6 +12,60 @@ pub struct PublicKey {
     key: Secp256k1PublicKey,
 }
 
+// Manual implementation of serialization traits
+impl serde::Serialize for PublicKey {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let bytes = self.key.serialize();
+        bytes.serialize(serializer)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for PublicKey {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let bytes: Vec<u8> = serde::Deserialize::deserialize(deserializer)?;
+        let key = Secp256k1PublicKey::from_slice(&bytes).map_err(serde::de::Error::custom)?;
+        Ok(PublicKey { key })
+    }
+}
+
+impl bincode::Encode for PublicKey {
+    fn encode<E: bincode::enc::Encoder>(
+        &self,
+        encoder: &mut E,
+    ) -> Result<(), bincode::error::EncodeError> {
+        let bytes = self.key.serialize();
+        bytes.encode(encoder)
+    }
+}
+
+impl bincode::Decode<()> for PublicKey {
+    fn decode<D: bincode::de::Decoder>(
+        decoder: &mut D,
+    ) -> Result<Self, bincode::error::DecodeError> {
+        let bytes: [u8; 33] = bincode::Decode::decode(decoder)?;
+        let key = Secp256k1PublicKey::from_slice(&bytes)
+            .map_err(|e| bincode::error::DecodeError::OtherString(format!("Invalid public key: {}", e)))?;
+        Ok(PublicKey { key })
+    }
+}
+
+impl<'de> bincode::BorrowDecode<'de, ()> for PublicKey {
+    fn borrow_decode<D: bincode::de::BorrowDecoder<'de>>(
+        decoder: &mut D,
+    ) -> Result<Self, bincode::error::DecodeError> {
+        let bytes: [u8; 33] = bincode::BorrowDecode::borrow_decode(decoder)?;
+        let key = Secp256k1PublicKey::from_slice(&bytes)
+            .map_err(|e| bincode::error::DecodeError::OtherString(format!("Invalid public key: {}", e)))?;
+        Ok(PublicKey { key })
+    }
+}
+
 impl PublicKey {
     /// Create a public key from a secp256k1 public key
     pub(crate) fn from_secp256k1(key: Secp256k1PublicKey) -> Self {
@@ -46,8 +100,13 @@ impl PublicKey {
         self.key.serialize_uncompressed()
     }
 
-    /// Convert to hex string (compressed)
+    /// Convert to hex string (uncompressed by default for compatibility)
     pub fn to_hex(&self) -> String {
+        hex::encode(self.to_uncompressed_bytes())
+    }
+
+    /// Convert to hex string (compressed)
+    pub fn to_hex_compressed(&self) -> String {
         hex::encode(self.to_bytes())
     }
 

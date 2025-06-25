@@ -165,7 +165,7 @@ impl ChainValidation {
 
     /// Validate transaction fees
     pub fn validate_transaction_fees(transaction: &Transaction) -> ChainResult<()> {
-        let core_asset = ObjectId::new(1, 3, 0)?;
+        let core_asset = ObjectId::new(1, 2, 0)?;
         
         for (i, operation) in transaction.operations.iter().enumerate() {
             let fee = Self::get_operation_fee(operation);
@@ -898,7 +898,7 @@ mod tests {
         let transaction = Transaction {
             ref_block_num: 12345,
             ref_block_prefix: 0x12345678,
-            expiration: 9999999999,
+            expiration: 4294967295,
             operations: vec![],
             extensions: vec![],
             signatures: vec![],
@@ -909,11 +909,11 @@ mod tests {
 
     #[test]
     fn test_validate_transfer_operation() {
-        let from = ObjectId::new(1, 2, 1).unwrap();
-        let to = ObjectId::new(1, 2, 2).unwrap();
+        let from = ObjectId::new(1, 1, 1).unwrap();
+        let to = ObjectId::new(1, 1, 2).unwrap();
         let amount = AssetAmount {
             amount: 10000,
-            asset_id: ObjectId::new(1, 3, 0).unwrap(),
+            asset_id: ObjectId::new(1, 2, 0).unwrap(),
         };
         
         // Valid transfer
@@ -925,7 +925,7 @@ mod tests {
         // Zero amount should fail
         let zero_amount = AssetAmount {
             amount: 0,
-            asset_id: ObjectId::new(1, 3, 0).unwrap(),
+            asset_id: ObjectId::new(1, 2, 0).unwrap(),
         };
         assert!(ChainValidation::validate_transfer_operation(&from, &to, &zero_amount, None).is_err());
     }
@@ -972,11 +972,11 @@ mod tests {
         let price = Price {
             base: AssetAmount {
                 amount: 100,
-                asset_id: ObjectId::new(1, 3, 0).unwrap(),
+                asset_id: ObjectId::new(1, 2, 0).unwrap(),
             },
             quote: AssetAmount {
                 amount: 200,
-                asset_id: ObjectId::new(1, 3, 1).unwrap(),
+                asset_id: ObjectId::new(1, 2, 1).unwrap(),
             },
         };
         
@@ -986,11 +986,11 @@ mod tests {
         let invalid_price = Price {
             base: AssetAmount {
                 amount: 0,
-                asset_id: ObjectId::new(1, 3, 0).unwrap(),
+                asset_id: ObjectId::new(1, 2, 0).unwrap(),
             },
             quote: AssetAmount {
                 amount: 200,
-                asset_id: ObjectId::new(1, 3, 1).unwrap(),
+                asset_id: ObjectId::new(1, 2, 1).unwrap(),
             },
         };
         

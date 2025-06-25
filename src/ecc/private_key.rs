@@ -50,9 +50,12 @@ impl PrivateKey {
                 reason: format!("Invalid WIF format: {:?}", e),
             })?;
 
-        if decoded.len() < 37 {
+        // WIF format: [version_byte][32_byte_key][compression_flag?][4_byte_checksum]
+        // Uncompressed: 37 bytes total (1 + 32 + 4)
+        // Compressed: 38 bytes total (1 + 32 + 1 + 4)
+        if decoded.len() != 37 && decoded.len() != 38 {
             return Err(EccError::InvalidPrivateKey {
-                reason: "WIF too short".to_string(),
+                reason: format!("Invalid WIF length: expected 37 or 38 bytes, got {}", decoded.len()),
             });
         }
 
@@ -63,18 +66,16 @@ impl PrivateKey {
             });
         }
 
-        // Extract key bytes (skip version byte and checksum)
-        let key_end = if decoded.len() == 38 {
-            33 // Uncompressed
-        } else if decoded.len() == 37 {
-            33 // Compressed without compression flag
+        // Determine if compressed based on length and compression flag
+        let is_compressed = if decoded.len() == 38 {
+            // Check compression flag
+            decoded[33] == 0x01
         } else {
-            return Err(EccError::InvalidPrivateKey {
-                reason: "Invalid WIF length".to_string(),
-            });
+            false // 37 bytes = uncompressed
         };
 
-        let key_bytes = &decoded[1..key_end];
+        // Extract key bytes (always 32 bytes after version byte)
+        let key_bytes = &decoded[1..33];
         
         // Verify checksum
         let checksum_start = decoded.len() - 4;
@@ -104,6 +105,20 @@ impl PrivateKey {
         payload.extend_from_slice(checksum);
         
         payload.to_base58()
+    }
+
+    /// Convert private key to hex string
+    pub fn to_hex(&self) -> String {
+        hex::encode(self.to_bytes())
+    }
+
+    /// Create private key from hex string
+    pub fn from_hex(hex_str: &str) -> EccResult<Self> {
+        let bytes = hex::decode(hex_str)
+            .map_err(|e| EccError::InvalidPrivateKey {
+                reason: format!("Invalid hex string: {}", e),
+            })?;
+        Self::from_bytes(&bytes)
     }
 
     /// Get the corresponding public key

@@ -513,7 +513,9 @@ mod tests {
 
     #[test]
     fn test_mnemonic_conversion() {
-        let entropy = vec![0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0];
+        // Use 16 bytes (minimum required) instead of 8 bytes
+        let entropy = vec![0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0,
+                          0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88];
         let mnemonic = KeyUtils::entropy_to_mnemonic(&entropy).unwrap();
         let recovered_entropy = KeyUtils::mnemonic_to_entropy(&mnemonic).unwrap();
         

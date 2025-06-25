@@ -273,7 +273,7 @@ impl TransactionBuilder {
                     
                     return Ok(AssetAmount {
                         amount: scaled_fee as i64,
-                        asset_id: ObjectId::new(1, 3, 0)?, // Core asset
+                        asset_id: ObjectId::new(1, 2, 0)?, // Core asset
                     });
                 }
             }
@@ -282,14 +282,14 @@ impl TransactionBuilder {
         // Default fee if no fee schedule is set
         Ok(AssetAmount {
             amount: 1000, // Default 0.001 core asset (assuming 5 decimal precision)
-            asset_id: ObjectId::new(1, 3, 0)?,
+            asset_id: ObjectId::new(1, 2, 0)?,
         })
     }
 
     /// Calculate total fees for all operations
     pub fn calculate_total_fees(&self) -> ChainResult<AssetAmount> {
         let mut total_fee = 0i64;
-        let core_asset = ObjectId::new(1, 3, 0)?;
+        let core_asset = ObjectId::new(1, 2, 0)?;
         
         for operation in &self.operations {
             let fee = match operation {
@@ -557,11 +557,11 @@ mod tests {
     #[test]
     fn test_add_transfer() {
         let mut builder = TransactionBuilder::new();
-        let from = ObjectId::new(1, 2, 1).unwrap();
-        let to = ObjectId::new(1, 2, 2).unwrap();
+        let from = ObjectId::new(1, 1, 1).unwrap();
+        let to = ObjectId::new(1, 1, 2).unwrap();
         let amount = AssetAmount {
             amount: 10000,
-            asset_id: ObjectId::new(1, 3, 0).unwrap(),
+            asset_id: ObjectId::new(1, 2, 0).unwrap(),
         };
         
         let result = builder.add_transfer(from, to, amount, None);
@@ -572,18 +572,18 @@ mod tests {
     #[test]
     fn test_calculate_total_fees() {
         let mut builder = TransactionBuilder::new();
-        let from = ObjectId::new(1, 2, 1).unwrap();
-        let to = ObjectId::new(1, 2, 2).unwrap();
+        let from = ObjectId::new(1, 1, 1).unwrap();
+        let to = ObjectId::new(1, 1, 2).unwrap();
         let amount = AssetAmount {
             amount: 10000,
-            asset_id: ObjectId::new(1, 3, 0).unwrap(),
+            asset_id: ObjectId::new(1, 2, 0).unwrap(),
         };
         
         builder.add_transfer(from, to, amount, None).unwrap();
         
         let total_fees = builder.calculate_total_fees().unwrap();
         assert!(total_fees.amount > 0);
-        assert_eq!(total_fees.asset_id, ObjectId::new(1, 3, 0).unwrap());
+        assert_eq!(total_fees.asset_id, ObjectId::new(1, 2, 0).unwrap());
     }
 
     #[test]
@@ -595,11 +595,11 @@ mod tests {
     #[test]
     fn test_validation_no_expiration() {
         let mut builder = TransactionBuilder::new();
-        let from = ObjectId::new(1, 2, 1).unwrap();
-        let to = ObjectId::new(1, 2, 2).unwrap();
+        let from = ObjectId::new(1, 1, 1).unwrap();
+        let to = ObjectId::new(1, 1, 2).unwrap();
         let amount = AssetAmount {
             amount: 10000,
-            asset_id: ObjectId::new(1, 3, 0).unwrap(),
+            asset_id: ObjectId::new(1, 2, 0).unwrap(),
         };
         
         builder.add_transfer(from, to, amount, None).unwrap();
@@ -612,11 +612,11 @@ mod tests {
         builder.set_expiration(3600).unwrap();
         builder.set_reference_block(12345, "0123456789abcdef0123456789abcdef").unwrap();
         
-        let from = ObjectId::new(1, 2, 1).unwrap();
-        let to = ObjectId::new(1, 2, 2).unwrap();
+        let from = ObjectId::new(1, 1, 1).unwrap();
+        let to = ObjectId::new(1, 1, 2).unwrap();
         let amount = AssetAmount {
             amount: 10000,
-            asset_id: ObjectId::new(1, 3, 0).unwrap(),
+            asset_id: ObjectId::new(1, 2, 0).unwrap(),
         };
         
         builder.add_transfer(from, to, amount, None).unwrap();
@@ -634,11 +634,11 @@ mod tests {
         let mut builder = TransactionBuilder::new();
         builder.set_expiration(3600).unwrap();
         
-        let from = ObjectId::new(1, 2, 1).unwrap();
-        let to = ObjectId::new(1, 2, 2).unwrap();
+        let from = ObjectId::new(1, 1, 1).unwrap();
+        let to = ObjectId::new(1, 1, 2).unwrap();
         let amount = AssetAmount {
             amount: 10000,
-            asset_id: ObjectId::new(1, 3, 0).unwrap(),
+            asset_id: ObjectId::new(1, 2, 0).unwrap(),
         };
         
         builder.add_transfer(from, to, amount, None).unwrap();

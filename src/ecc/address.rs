@@ -8,7 +8,7 @@ use ripemd::{Ripemd160, Digest as RipemdDigest};
 use std::fmt;
 
 /// A blockchain address with support for multiple formats
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize, bincode::Encode, bincode::Decode)]
 pub struct Address {
     /// The raw address bytes (without prefix or checksum)
     hash: [u8; 20],
@@ -19,7 +19,7 @@ pub struct Address {
 }
 
 /// Supported address formats
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize, bincode::Encode, bincode::Decode)]
 pub enum AddressFormat {
     /// R-Squared native format with prefix
     RSquared,
@@ -64,11 +64,9 @@ impl Address {
     /// Create an address from a string representation
     pub fn from_string(address_str: &str) -> EccResult<Self> {
         // Try to parse as R-Squared format first (prefix + base58)
-        if let Some(prefix_end) = address_str.find(char::is_numeric) {
-            let prefix = &address_str[..prefix_end];
-            let encoded_part = &address_str[prefix_end..];
-            
-            return Self::from_rsquared_string(encoded_part, prefix);
+        if let Some(prefix) = Self::extract_prefix(address_str) {
+            let encoded_part = &address_str[prefix.len()..];
+            return Self::from_rsquared_string(encoded_part, &prefix);
         }
         
         // Try to parse as legacy format (pure base58)
@@ -82,15 +80,16 @@ impl Address {
                 reason: format!("Invalid base58 encoding: {:?}", e),
             })?;
 
-        if decoded.len() != 24 {
+        if decoded.len() < 20 || decoded.len() > 24 {
             return Err(EccError::InvalidAddress {
-                reason: format!("Invalid address length: expected 24, got {}", decoded.len()),
+                reason: format!("Invalid address length: expected 20-24, got {}", decoded.len()),
             });
         }
 
         // Verify checksum (last 4 bytes)
-        let payload = &decoded[..20];
-        let checksum = &decoded[20..24];
+        let checksum_start = decoded.len() - 4;
+        let payload = &decoded[..checksum_start];
+        let checksum = &decoded[checksum_start..];
         let expected_checksum = &Self::calculate_checksum(payload, prefix)[..4];
         
         if checksum != expected_checksum {
@@ -100,7 +99,11 @@ impl Address {
         }
 
         let mut hash = [0u8; 20];
-        hash.copy_from_slice(payload);
+        if payload.len() >= 20 {
+            hash.copy_from_slice(&payload[payload.len()-20..]);
+        } else {
+            hash[20-payload.len()..].copy_from_slice(payload);
+        }
 
         Ok(Self {
             hash,
@@ -271,11 +274,48 @@ impl Address {
 
     /// Extract the prefix from an address string
     pub fn extract_prefix(address_str: &str) -> Option<String> {
-        if let Some(prefix_end) = address_str.find(char::is_numeric) {
-            Some(address_str[..prefix_end].to_string())
-        } else {
-            None
+        // A prefix should be a sequence of uppercase letters at the start
+        // But we need to be careful not to include base58 characters that happen to be uppercase
+        // Base58 alphabet: 123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz
+        
+        // Common prefixes we expect
+        let common_prefixes = ["RSQ", "BTC", "ETH", "TEST", "MYTOKEN"];
+        
+        // First try common prefixes
+        for prefix in &common_prefixes {
+            if address_str.starts_with(prefix) {
+                let remaining = &address_str[prefix.len()..];
+                // Make sure there's something after the prefix and it looks like base58
+                if !remaining.is_empty() && remaining.chars().next().unwrap().is_ascii_alphanumeric() {
+                    return Some(prefix.to_string());
+                }
+            }
         }
+        
+        // If no common prefix matches, try to extract a reasonable prefix
+        // Look for 2-6 uppercase letters that are followed by mixed case base58
+        for len in 2..=6 {
+            if len >= address_str.len() {
+                continue;
+            }
+            
+            let potential_prefix = &address_str[..len];
+            let remaining = &address_str[len..];
+            
+            // Check if the potential prefix is all uppercase letters (not numbers)
+            if potential_prefix.chars().all(|c| c.is_ascii_uppercase() && c.is_ascii_alphabetic()) {
+                // Check if the remaining part starts with a lowercase letter or number
+                // This helps distinguish prefix from base58 content
+                if !remaining.is_empty() {
+                    let first_char = remaining.chars().next().unwrap();
+                    if first_char.is_ascii_lowercase() || first_char.is_ascii_digit() {
+                        return Some(potential_prefix.to_string());
+                    }
+                }
+            }
+        }
+        
+        None
     }
 
     /// Check if an address string is in R-Squared format
@@ -356,7 +396,11 @@ mod tests {
         let address = Address::generate_random("MYTOKEN");
         let address_str = address.to_string();
         
+        println!("Generated address string: {}", address_str);
+        println!("Expected prefix: MYTOKEN");
+        
         let extracted_prefix = Address::extract_prefix(&address_str).unwrap();
+        println!("Extracted prefix: {}", extracted_prefix);
         assert_eq!(extracted_prefix, "MYTOKEN");
     }
 

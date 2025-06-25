@@ -625,8 +625,8 @@ mod tests {
 
     #[test]
     fn test_validate_public_key() {
-        let compressed_key = "02" + &"a".repeat(64);
-        let uncompressed_key = "04" + &"b".repeat(128);
+        let compressed_key = "02".to_owned() + &"a".repeat(64);
+        let uncompressed_key = "04".to_owned() + &"b".repeat(128);
 
         assert!(SerializerValidation::validate_public_key(&compressed_key).is_ok());
         assert!(SerializerValidation::validate_public_key(&uncompressed_key).is_ok());
@@ -634,7 +634,7 @@ mod tests {
         // Invalid keys
         assert!(SerializerValidation::validate_public_key("").is_err());
         assert!(SerializerValidation::validate_public_key("short").is_err());
-        assert!(SerializerValidation::validate_public_key(&("02" + &"g".repeat(64))).is_err()); // invalid hex
+        assert!(SerializerValidation::validate_public_key(&("02".to_owned() + &"g".repeat(64))).is_err()); // invalid hex
     }
 
     #[test]

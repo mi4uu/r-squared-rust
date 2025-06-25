@@ -525,7 +525,7 @@ mod tests {
         let cached_storage = middleware::CachingStorage::new(storage, 10);
         
         let key = "test.txt";
-        let data = Bytes::from("Hello, World!");
+        let data = bytes::Bytes::from("Hello, World!");
         
         cached_storage.put(key, data.clone()).unwrap();
         let retrieved = cached_storage.get(key).unwrap();

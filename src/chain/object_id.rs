@@ -155,16 +155,13 @@ impl ObjectId {
 
     /// Validate the ObjectId format and constraints
     pub fn validate(&self) -> ChainResult<()> {
-        // Space should typically be 1 for protocol objects
-        if self.space == 0 {
-            return Err(ChainError::ValidationError {
-                field: "space".to_string(),
-                reason: "Space cannot be 0".to_string(),
-            });
-        }
-
-        // Type should be within known range (1-14 for standard objects)
-        if self.type_id == 0 || self.type_id > 20 {
+        // Space 0 is allowed for special system objects
+        // Space 1 is for protocol objects
+        // Higher spaces may be used for custom implementations
+        
+        // Type should be within known range (0-20 for standard objects)
+        // Type 0 is allowed for special system objects
+        if self.type_id > 20 {
             return Err(ChainError::ValidationError {
                 field: "type_id".to_string(),
                 reason: format!("Type ID {} is out of valid range", self.type_id),
@@ -236,23 +233,23 @@ impl Default for ObjectId {
 pub mod constants {
     use super::ObjectId;
 
-    /// Null account (1.2.0)
-    pub const NULL_ACCOUNT: ObjectId = ObjectId::new_unchecked(1, 2, 0);
+    /// Null account (1.1.0) - type 1 for accounts
+    pub const NULL_ACCOUNT: ObjectId = ObjectId::new_unchecked(1, 1, 0);
 
-    /// Committee account (1.2.0)
-    pub const COMMITTEE_ACCOUNT: ObjectId = ObjectId::new_unchecked(1, 2, 0);
+    /// Committee account (1.1.0)
+    pub const COMMITTEE_ACCOUNT: ObjectId = ObjectId::new_unchecked(1, 1, 0);
 
-    /// Witness account (1.2.1)
-    pub const WITNESS_ACCOUNT: ObjectId = ObjectId::new_unchecked(1, 2, 1);
+    /// Witness account (1.1.1)
+    pub const WITNESS_ACCOUNT: ObjectId = ObjectId::new_unchecked(1, 1, 1);
 
-    /// Relaxed committee account (1.2.2)
-    pub const RELAXED_COMMITTEE_ACCOUNT: ObjectId = ObjectId::new_unchecked(1, 2, 2);
+    /// Relaxed committee account (1.1.2)
+    pub const RELAXED_COMMITTEE_ACCOUNT: ObjectId = ObjectId::new_unchecked(1, 1, 2);
 
-    /// Proxy to self account (1.2.3)
-    pub const PROXY_TO_SELF_ACCOUNT: ObjectId = ObjectId::new_unchecked(1, 2, 3);
+    /// Proxy to self account (1.1.3)
+    pub const PROXY_TO_SELF_ACCOUNT: ObjectId = ObjectId::new_unchecked(1, 1, 3);
 
-    /// Core asset (1.3.0)
-    pub const CORE_ASSET: ObjectId = ObjectId::new_unchecked(1, 3, 0);
+    /// Core asset (1.2.0) - type 2 for assets
+    pub const CORE_ASSET: ObjectId = ObjectId::new_unchecked(1, 2, 0);
 }
 
 #[cfg(test)]
@@ -304,10 +301,16 @@ mod tests {
         let valid_id = ObjectId::new(1, 2, 100);
         assert!(valid_id.is_ok());
 
-        let invalid_space = ObjectId::new(0, 2, 100);
-        assert!(invalid_space.is_err());
+        // Space 0 is now allowed for system objects
+        let system_space = ObjectId::new(0, 2, 100);
+        assert!(system_space.is_ok());
 
-        let invalid_type = ObjectId::new(1, 0, 100);
+        // Type 0 is now allowed for system objects
+        let system_type = ObjectId::new(1, 0, 100);
+        assert!(system_type.is_ok());
+
+        // Test invalid type (too high)
+        let invalid_type = ObjectId::new(1, 25, 100);
         assert!(invalid_type.is_err());
     }
 
@@ -321,8 +324,8 @@ mod tests {
 
     #[test]
     fn test_constants() {
-        assert_eq!(constants::NULL_ACCOUNT.to_string(), "1.2.0");
-        assert_eq!(constants::CORE_ASSET.to_string(), "1.3.0");
+        assert_eq!(constants::NULL_ACCOUNT.to_string(), "1.1.0");
+        assert_eq!(constants::CORE_ASSET.to_string(), "1.2.0");
         assert!(constants::NULL_ACCOUNT.is_account());
         assert!(constants::CORE_ASSET.is_asset());
     }

@@ -498,7 +498,7 @@ mod tests {
     #[test]
     fn test_string_parsing() {
         let test_string = "Hello, R-Squared!";
-        let encoded = SerializerUtils::encode_string(test_string).unwrap();
+        let encoded = SerializerUtils::encode_string(test_string);
         
         let mut parser = FastParser::from_data(encoded);
         let decoded = parser.read_string().unwrap();

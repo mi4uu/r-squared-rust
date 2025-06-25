@@ -729,12 +729,13 @@ mod tests {
         let key = "async_test.txt";
         let data = Bytes::from("Async Hello, World!");
         
-        storage.put(key, data.clone()).await.unwrap();
-        let retrieved = storage.get(key).await.unwrap();
+        // LocalStorage implements StorageApiSync, so we don't use .await
+        storage.put(key, data.clone()).unwrap();
+        let retrieved = storage.get(key).unwrap();
         
         assert_eq!(data, retrieved);
         
-        storage.delete(key).await.unwrap();
-        assert!(!storage.exists(key).await.unwrap());
+        storage.delete(key).unwrap();
+        assert!(!storage.exists(key).unwrap());
     }
 }

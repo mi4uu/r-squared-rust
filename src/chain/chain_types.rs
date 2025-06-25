@@ -653,6 +653,14 @@ impl ChainTypes {
             });
         }
 
+        // Cannot be purely numeric
+        if name.chars().all(|c| c.is_ascii_digit()) {
+            return Err(ChainError::ValidationError {
+                field: "name".to_string(),
+                reason: "Account name cannot be purely numeric".to_string(),
+            });
+        }
+
         Ok(())
     }
 
@@ -680,6 +688,22 @@ impl ChainTypes {
                     reason: "Invalid character in asset symbol".to_string(),
                 });
             }
+        }
+
+        // Cannot be purely numeric
+        if symbol.chars().all(|c| c.is_ascii_digit()) {
+            return Err(ChainError::ValidationError {
+                field: "symbol".to_string(),
+                reason: "Asset symbol cannot be purely numeric".to_string(),
+            });
+        }
+
+        // Cannot start or end with dot
+        if symbol.starts_with('.') || symbol.ends_with('.') {
+            return Err(ChainError::ValidationError {
+                field: "symbol".to_string(),
+                reason: "Asset symbol cannot start or end with dot".to_string(),
+            });
         }
 
         Ok(())

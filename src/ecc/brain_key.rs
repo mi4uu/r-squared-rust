@@ -424,15 +424,15 @@ mod tests {
         let brain_key = BrainKey::from_words(words).unwrap();
         assert!(brain_key.validate().unwrap());
         
-        let invalid_words = "invalid words that are not in dictionary";
+        let invalid_words = "invalid words that are not in dictionary and have twelve words total here";
         let invalid_brain_key = BrainKey::from_words(invalid_words).unwrap();
         assert!(!invalid_brain_key.validate().unwrap());
     }
 
     #[test]
     fn test_brain_key_normalization() {
-        let words1 = "  ABANDON   abandon   ABANDON  ";
-        let words2 = "abandon abandon abandon";
+        let words1 = "  ABANDON   abandon   ABANDON abandon abandon abandon abandon abandon abandon abandon abandon about  ";
+        let words2 = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
         
         let brain_key1 = BrainKey::from_words(words1).unwrap();
         let brain_key2 = BrainKey::from_words(words2).unwrap();

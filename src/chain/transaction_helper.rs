@@ -540,7 +540,7 @@ mod tests {
         let transaction = Transaction {
             ref_block_num: 12345,
             ref_block_prefix: 0x12345678,
-            expiration: 9999999999, // Future timestamp
+            expiration: 4294967295, // Future timestamp (max u32)
             operations: vec![Operation::Transfer {
                 fee: AssetAmount {
                     amount: 1000,
@@ -571,7 +571,7 @@ mod tests {
         let transaction = Transaction {
             ref_block_num: 12345,
             ref_block_prefix: 0x12345678,
-            expiration: 9999999999,
+            expiration: 4294967295,
             operations: vec![],
             extensions: vec![],
             signatures: vec![],
@@ -589,7 +589,7 @@ mod tests {
         let transaction = Transaction {
             ref_block_num: 12345,
             ref_block_prefix: 0x12345678,
-            expiration: 9999999999,
+            expiration: 4294967295,
             operations: vec![
                 Operation::Transfer {
                     fee: AssetAmount {
