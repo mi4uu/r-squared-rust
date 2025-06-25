@@ -2,11 +2,11 @@
 name = "r-squared-rust"
 version = "0.1.0"
 edition = "2021"
-authors = ["R-Squared Labs LLC <rsquaredlabscontact@gmail.com>"]
+authors = ["Michal Lipinski <michal.lipinski@gmail.com>"]
 description = "Pure Rust R-Squared library for blockchain operations, cryptography, and data serialization"
 license = "MIT"
-repository = "https://github.com/R-Squared-Project/R-Squared-rust"
-homepage = "https://github.com/R-Squared-Project/R-Squared-rust"
+repository = "https://github.com/mi4uu/r-squared-rust"
+homepage = "https://github.com/mi4uu/r-squared-rust"
 documentation = "https://docs.rs/r-squared-rust"
 keywords = ["blockchain", "cryptography", "serialization", "r-squared"]
 categories = ["cryptography", "encoding", "web-programming"]

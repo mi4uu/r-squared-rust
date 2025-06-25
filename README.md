@@ -91,7 +91,6 @@ The library is organized into four main modules:
 | Feature | Description | Dependencies |
 |---------|-------------|--------------|
 | `std` | Standard library support (enabled by default) | - |
-| `wasm` | WebAssembly support for browsers | `wasm-bindgen`, `js-sys`, `web-sys` |
 | `async` | Asynchronous operations | `tokio`, `futures` |
 | `s3` | AWS S3 storage backend | `aws-sdk-s3`, `aws-config` |
 | `ipfs` | IPFS storage backend | `ipfs-api-backend-hyper` |
@@ -191,7 +190,6 @@ cargo bench
 
 - **Rust Version**: 1.70 or higher
 - **Platforms**: Linux, macOS, Windows
-- **WebAssembly**: Supported with `wasm` feature
 - **No-std**: Supported (disable `std` feature)
 
 ## Contributing
