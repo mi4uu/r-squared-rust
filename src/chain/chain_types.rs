@@ -200,7 +200,7 @@ pub struct Extension {
 }
 
 /// Transaction structure
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, bincode::Encode, bincode::Decode)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, bincode::Encode, bincode::Decode, Default)]
 pub struct Transaction {
     /// Reference block number
     pub ref_block_num: u16,

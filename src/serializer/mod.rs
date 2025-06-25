@@ -14,15 +14,18 @@
 //! ## Example
 //!
 //! ```rust
-//! use r_squared_rust::serializer::{Serializer, SerializerTypes};
+//! use r_squared_rust::serializer::Serializer;
 //! use r_squared_rust::chain::Transaction;
+//!
+//! // Create a serializer instance
+//! let serializer = Serializer::new();
 //!
 //! // Serialize a transaction
 //! let transaction = Transaction::default();
-//! let serialized = Serializer::serialize(&transaction)?;
+//! let serialized = serializer.serialize(&transaction)?;
 //!
 //! // Deserialize back
-//! let deserialized: Transaction = Serializer::deserialize(&serialized)?;
+//! let deserialized: Transaction = serializer.deserialize(&serialized)?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
