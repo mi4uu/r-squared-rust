@@ -4,9 +4,9 @@
 //! focusing on performance and memory efficiency for blockchain operations.
 
 use crate::error::{SerializerError, SerializerResult};
-use crate::serializer::{SerializerTypes, SerializerUtils};
+use crate::serializer::SerializerUtils;
 use std::collections::HashMap;
-use std::io::{Cursor, Read};
+use std::io::Read;
 
 /// High-performance binary data parser
 pub struct FastParser {

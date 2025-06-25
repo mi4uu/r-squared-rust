@@ -5,13 +5,10 @@
 
 use crate::chain::{
     chain_types::*,
-    number_utils::PrecisionNumber,
     ObjectId,
 };
-use crate::ecc::{PrivateKey, PublicKey, Signature};
+use crate::ecc::PrivateKey;
 use crate::error::{ChainError, ChainResult};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Transaction builder for creating blockchain transactions

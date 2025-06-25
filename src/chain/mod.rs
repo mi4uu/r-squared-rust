@@ -22,7 +22,7 @@ pub use transaction_helper::TransactionHelper;
 pub use chain_validation::ChainValidation;
 pub use account_login::{AccountLogin, LoginSession, LoginCredentials, LoginChallenge, LoginResponse};
 
-use crate::error::{ChainError, ChainResult};
+use crate::error::ChainResult;
 
 /// Common blockchain constants
 pub mod constants {

@@ -3,10 +3,10 @@
 use crate::error::{EccError, EccResult};
 use crate::ecc::{PublicKey, Signature, secp256k1::SECP256K1, constants::PRIVATE_KEY_SIZE};
 use secp256k1::{SecretKey, Message};
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use zeroize::Zeroize;
 use sha2::{Sha256, Digest};
 use base58::{ToBase58, FromBase58};
-use rand::{Rng, RngCore};
+use rand::RngCore;
 
 /// A private key for elliptic curve cryptography
 #[derive(Clone)]
@@ -17,7 +17,7 @@ pub struct PrivateKey {
 impl PrivateKey {
     /// Generate a new random private key
     pub fn generate() -> EccResult<Self> {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut key_bytes = [0u8; 32];
         rng.fill_bytes(&mut key_bytes);
         let key = SecretKey::from_byte_array(key_bytes)

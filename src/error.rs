@@ -197,7 +197,7 @@ pub enum NetworkError {
     #[error("Invalid URL: {url}")]
     InvalidUrl { url: String },
 
-    /// HTTP error
+    /// HTTP error {status}: {message}
     #[error("HTTP error: {status}: {message}")]
     HttpError { status: u16, message: String },
 }

@@ -7,8 +7,7 @@ use crate::chain::{
     chain_types::*,
     ObjectId,
 };
-use crate::error::{ChainError, ChainResult, NetworkError};
-use serde::{Deserialize, Serialize};
+use crate::error::{ChainError, ChainResult};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};

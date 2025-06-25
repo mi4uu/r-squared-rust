@@ -101,35 +101,25 @@ pub struct BatchResult {
 #[cfg(feature = "async")]
 pub trait StorageApi: Send + Sync {
     /// Put an object into storage
-    async fn put(&self, key: &str, data: Bytes) -> StorageResult<()>;
-    
+     fn put(&self, key: &str, data: Bytes) -> impl std::future::Future<Output = StorageResult<()>> + Send;    
     /// Put an object with metadata
-    async fn put_with_metadata(&self, key: &str, data: Bytes, metadata: StorageMetadata) -> StorageResult<()>;
-    
+     fn put_with_metadata(&self, key: &str, data: Bytes, metadata: StorageMetadata) -> impl std::future::Future<Output = StorageResult<()>> + Send;    
     /// Get an object from storage
-    async fn get(&self, key: &str) -> StorageResult<Bytes>;
-    
+     fn get(&self, key: &str) -> impl std::future::Future<Output = StorageResult<Bytes>> + Send;    
     /// Get an object with metadata
-    async fn get_with_metadata(&self, key: &str) -> StorageResult<(Bytes, StorageMetadata)>;
-    
+     fn get_with_metadata(&self, key: &str) -> impl std::future::Future<Output = StorageResult<(Bytes, StorageMetadata)>> + Send;    
     /// Delete an object from storage
-    async fn delete(&self, key: &str) -> StorageResult<()>;
-    
+fn delete(&self, key: &str) -> impl std::future::Future<Output = StorageResult<()>> + Send;    
     /// Check if an object exists
-    async fn exists(&self, key: &str) -> StorageResult<bool>;
-    
+ fn exists(&self, key: &str) -> impl std::future::Future<Output = StorageResult<bool>> + Send;    
     /// List objects with a prefix
-    async fn list(&self, prefix: &str) -> StorageResult<Vec<String>>;
-    
+fn list(&self, prefix: &str) -> impl std::future::Future<Output = StorageResult<Vec<String>>> + Send;    
     /// Get object metadata only
-    async fn head(&self, key: &str) -> StorageResult<StorageMetadata>;
-    
+  fn head(&self, key: &str) -> impl std::future::Future<Output = StorageResult<StorageMetadata>> + Send;    
     /// Copy an object within the same backend
-    async fn copy(&self, source: &str, destination: &str) -> StorageResult<()>;
-    
+   fn copy(&self, source: &str, destination: &str) -> impl std::future::Future<Output = StorageResult<()>> + Send;    
     /// Execute batch operations
-    async fn batch(&self, operations: Vec<BatchOperation>) -> StorageResult<Vec<BatchResult>>;
-    
+fn batch(&self, operations: Vec<BatchOperation>) -> impl std::future::Future<Output = StorageResult<Vec<BatchResult>>> + Send;    
     /// Get storage backend type
     fn backend_type(&self) -> StorageBackend;
     

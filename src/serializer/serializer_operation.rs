@@ -4,13 +4,11 @@
 //! blockchain operations for the R-Squared blockchain.
 
 use crate::error::{SerializerError, SerializerResult};
-use crate::chain::{AssetAmount, ObjectId, Authority, Memo, Price};
+use crate::chain::{AssetAmount, ObjectId, Authority, Memo};
 use crate::chain::chain_types::{Operation, Transaction, Extension};
 use crate::serializer::serializer_types::SerializationContext;
 use std::collections::HashMap;
 
-#[cfg(feature = "serde_support")]
-use serde::{Serialize, Deserialize};
 
 /// Operation serialization and deserialization
 pub struct SerializerOperation;

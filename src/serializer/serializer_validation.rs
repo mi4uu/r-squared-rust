@@ -6,10 +6,7 @@
 use crate::error::{SerializerError, SerializerResult};
 use crate::chain::{Transaction, Operation, AssetAmount, ObjectId, Authority, Memo};
 use crate::serializer::SerializerTypes;
-use std::collections::HashMap;
 
-#[cfg(feature = "serde_support")]
-use serde::{Serialize, Deserialize};
 
 /// Serialization validation and integrity checks
 pub struct SerializerValidation;

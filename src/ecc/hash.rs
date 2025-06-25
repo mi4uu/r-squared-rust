@@ -157,7 +157,7 @@ pub fn verify_checksum(data: &[u8], expected_checksum: &[u8]) -> bool {
 pub fn pbkdf2_sha256(password: &[u8], salt: &[u8], iterations: u32, length: usize) -> Vec<u8> {
     use pbkdf2::pbkdf2;
     let mut output = vec![0u8; length];
-    pbkdf2::<Hmac<Sha256>>(password, salt, iterations, &mut output);
+    let _=pbkdf2::<Hmac<Sha256>>(password, salt, iterations, &mut output).expect("pbkdf2 error");
     output
 }
 

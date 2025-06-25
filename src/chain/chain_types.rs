@@ -3,7 +3,7 @@
 //! This module defines the core data structures and types used in the
 //! R-Squared blockchain, including accounts, assets, operations, and transactions.
 
-use crate::chain::{ObjectId, PrecisionNumber};
+use crate::chain::ObjectId;
 use crate::error::{ChainError, ChainResult};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

@@ -4,11 +4,11 @@
 //! blockchain, supporting multiple formats and providing high-level APIs.
 
 use crate::error::{SerializerError, SerializerResult};
-use crate::serializer::{SerializerTypes, SerializerValidation, SerializerUtils, FastParser};
+use crate::serializer::{SerializerValidation, SerializerUtils};
 use std::time::Instant;
 
 #[cfg(feature = "serde_support")]
-use serde::{Serialize, Deserialize, de::DeserializeOwned};
+use serde::{Serialize, de::DeserializeOwned};
 
 /// Main serializer for blockchain data
 pub struct Serializer {

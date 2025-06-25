@@ -4,7 +4,6 @@
 //! the serialization system for the R-Squared blockchain.
 
 use crate::error::{SerializerError, SerializerResult};
-use crate::chain::{ObjectId, AssetAmount, Transaction, Block, Account, Asset, Operation, Authority, Memo, Price};
 use std::collections::HashMap;
 
 #[cfg(feature = "serde_support")]

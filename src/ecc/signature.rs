@@ -1,9 +1,8 @@
 //! Digital signature implementation
 
 use crate::error::{EccError, EccResult};
-use crate::ecc::{PublicKey, secp256k1::SECP256K1, constants::SIGNATURE_SIZE};
-use secp256k1::{ecdsa::RecoverableSignature, ecdsa::Signature as EcdsaSignature, ecdsa::RecoveryId, Message};
-use sha2::{Sha256, Digest};
+use crate::ecc::{PublicKey, constants::SIGNATURE_SIZE};
+use secp256k1::{ecdsa::RecoverableSignature, ecdsa::RecoveryId, Message};
 
 /// A digital signature with recovery capability
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -8,8 +8,7 @@ use crate::chain::{
     ObjectId,
 };
 use crate::ecc::{PrivateKey, PublicKey, Signature, hash};
-use crate::error::{ChainError, ChainResult, NetworkError};
-use serde::{Deserialize, Serialize};
+use crate::error::{ChainError, ChainResult};
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 

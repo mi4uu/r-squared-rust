@@ -5,7 +5,6 @@
 
 use crate::error::{SerializerError, SerializerResult};
 use std::collections::HashMap;
-use std::io::{Read, Write};
 
 /// Utility functions for serialization operations
 pub struct SerializerUtils;

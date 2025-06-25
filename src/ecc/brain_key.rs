@@ -1,7 +1,7 @@
 //! Brain key implementation for deterministic key generation
 
 use crate::error::{EccError, EccResult};
-use crate::ecc::{PrivateKey, PublicKey, hash};
+use crate::ecc::{PrivateKey, PublicKey};
 use sha2::{Sha256, Digest};
 use pbkdf2::pbkdf2;
 use hmac::Hmac;
@@ -77,12 +77,12 @@ impl BrainKey {
         
         // Use PBKDF2 for key derivation
         let mut derived_key = [0u8; 32];
-        pbkdf2::<Hmac<Sha256>>(
+        let _=pbkdf2::<Hmac<Sha256>>(
             self.normalized_words.as_bytes(),
             &sequence.to_be_bytes(),
             4096, // iterations
             &mut derived_key,
-        );
+        ).expect("pbkdf2 error");
         
         PrivateKey::from_bytes(&derived_key)
     }

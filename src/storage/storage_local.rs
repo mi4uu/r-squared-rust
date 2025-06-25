@@ -14,13 +14,11 @@ use crate::storage::storage_api::{
 };
 use bytes::Bytes;
 use std::collections::HashMap;
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, File};
 use std::io::{Read, Write, BufReader, BufWriter};
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::UNIX_EPOCH;
 
-#[cfg(feature = "async")]
-use tokio::fs as async_fs;
 #[cfg(feature = "async")]
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 

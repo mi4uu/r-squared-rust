@@ -1,10 +1,10 @@
 //! Address implementation for R-Squared blockchain
 
 use crate::error::{EccError, EccResult};
-use crate::ecc::{PublicKey, hash};
+use crate::ecc::PublicKey;
 use base58::{ToBase58, FromBase58};
 use sha2::{Sha256, Digest};
-use ripemd::{Ripemd160, Digest as RipemdDigest};
+use ripemd::Digest as RipemdDigest;
 use std::fmt;
 
 /// A blockchain address with support for multiple formats
