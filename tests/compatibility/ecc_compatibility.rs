@@ -284,6 +284,8 @@ fn test_address_validation_compatibility() {
         "RSQLoVGDgRs9hTfTNJNuXKSpywcbdvy1agVX", // Wrong checksum
         "BTSLoVGDgRs9hTfTNJNuXKSpywcbdvy1agVK", // Wrong prefix
         "RSQLoVGDgRs9hTfTNJNuXKSpywcbdvy1agV", // Too short
+        "RSQLoVGDgRs9hTfTNJNuXKSpywcbdvy1agVKa", // extra char at end
+        "",                                      // empty
     ];
     
     for address_str in &invalid_addresses {
