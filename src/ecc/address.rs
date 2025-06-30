@@ -236,9 +236,7 @@ impl Address {
 
     /// Double SHA-256 hash for legacy addresses
     fn double_sha256(data: &[u8]) -> [u8; 32] {
-        let first_hash = Sha256::digest(data);
-        let second_hash = Sha256::digest(&first_hash);
-        second_hash.into()
+        Sha256::digest( Sha256::digest(data) ).into()
     }
 }
 
@@ -418,5 +416,19 @@ mod tests {
         assert!(Address::from_string("invalid_address").is_err());
         assert!(Address::from_string("RSQ123invalid").is_err());
         assert!(!Address::validate_string("not_an_address"));
+    }
+
+    #[test]
+    fn test_calculate_double_sha() {
+        fn hash_to_str(data: &[u8; 32]) -> String {
+            use std::fmt::Write;
+            let mut ret = String::with_capacity(32*2);
+            for &by in data {
+                write!(&mut ret, "{:02x}", by).unwrap();
+            }
+            return ret;
+        }
+        let s = Address::double_sha256(b"abc");
+        assert_eq!(hash_to_str(&s) , "4f8b42c22dd3729b519ba6f68d2da7cc5b2d606d05daed5ad5128cc03e6c6358");
     }
 }
